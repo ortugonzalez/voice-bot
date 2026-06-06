@@ -246,7 +246,7 @@ app.get('/health', (_req, res) => {
 app.post('/call', async (req, res) => {
   const { phone, donor_name, last_amount, ong_name, causa, tono, impacto_mensaje } = req.body || {};
 
-  if (!phone) return res.status(400).json({ error: 'Falta "phone" (ej: +5492235428861)' });
+  if (!phone) return res.status(400).json({ error: 'Falta "phone" en formato E.164 (ej: +549XXXXXXXXXX)' });
   if (!AGENT_ID || !AGENT_PHONE_NUMBER_ID) {
     return res.status(503).json({ error: 'Setup incompleto. Corre npm run setup.' });
   }
@@ -451,7 +451,7 @@ app.post('/call/batch', async (req, res) => {
 
 app.post('/onboarding', async (req, res) => {
   const { phone, ong_name } = req.body || {};
-  if (!phone) return res.status(400).json({ error: 'Falta "phone" (ej: +5492235428861)' });
+  if (!phone) return res.status(400).json({ error: 'Falta "phone" en formato E.164 (ej: +549XXXXXXXXXX)' });
   if (!SOFIA_AGENT_ID) {
     return res.status(503).json({ error: 'Sofia no configurada. Corre npm run setup.' });
   }

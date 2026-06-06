@@ -8,7 +8,9 @@
     "setup": "node setup.js",
     "start": "node server.js",
     "call": "node test-call.js",
-    "test": "node --test call-analysis.test.js dashboard/csv-parser.test.js"
+    "test:unit": "node --test call-analysis.test.js dashboard/csv-parser.test.js",
+    "test:smoke": "node smoke-test.js",
+    "test": "npm run test:unit && npm run test:smoke"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
