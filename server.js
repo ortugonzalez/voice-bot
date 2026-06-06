@@ -23,6 +23,7 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import dotenv from 'dotenv';
 import express from 'express';
+import { classifyValentinaCall } from './call-analysis.js';
 import { parseTranscriptAndUpdate } from './transcript-parser.js';
 
 dotenv.config({ path: new URL('./.env', import.meta.url) });
@@ -32,6 +33,7 @@ const {
   AGENT_ID,
   SOFIA_AGENT_ID,
   AGENT_PHONE_NUMBER_ID,
+  DISABLE_BACKGROUND_JOBS,
   PORT = 3100,
 } = process.env;
 
@@ -72,7 +74,32 @@ function updateJsonByField(path, field, value, updates) {
 }
 
 // ─────────────────────────────────────────────
-// Helper: horario de llamadas (10-20hs Argentina)
+// Helpers: campañas
+// ─────────────────────────────────────────────
+
+function getCampaignStats(calls, batchId) {
+  const campaignCalls = calls.filter(call => call.campaign_id === batchId);
+  const handoffStatuses = new Set(['handoff_required', 'resolved']);
+  const successfulStatuses = new Set([
+    'initiated',
+    'completed',
+    'converted',
+    'handoff_required',
+    'resolved',
+  ]);
+
+  return {
+    procesadas:   campaignCalls.length,
+    exitosas:     campaignCalls.filter(call => successfulStatuses.has(call.status)).length,
+    convertidos:  campaignCalls.filter(call => call.status === 'converted').length,
+    handoffs:     campaignCalls.filter(call => handoffStatuses.has(call.status)).length,
+    fallidas:     campaignCalls.filter(call => call.status === 'failed').length,
+    encoladas:    campaignCalls.filter(call => call.status === 'queued').length,
+  };
+}
+
+// ─────────────────────────────────────────────
+// Helpers: horario de llamadas (10-20hs Argentina)
 // Argentina es UTC-3, sin horario de verano
 // ─────────────────────────────────────────────
 
@@ -86,12 +113,30 @@ function isWithinCallingHours() {
 }
 
 // ─────────────────────────────────────────────
-// Helper: normalizar texto para comparación de keywords
+// Helper: guardar resultado final de una llamada de Valentina
 // ─────────────────────────────────────────────
 
-function normalizeText(text) {
-  // U+0300–U+036F: bloque de diacríticos combinantes (tildes, etc.)
-  return String(text).toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
+function updateValentinaOutcome({ conversationId, transcript, summary, failed = false }) {
+  const outcome = failed
+    ? { status: 'failed', isConverted: false, requiresHandoff: false }
+    : classifyValentinaCall({ transcript, summary });
+
+  const updates = {
+    status:     outcome.status,
+    updated_at: new Date().toISOString(),
+  };
+  if (outcome.isConverted) updates.notes = 'Donante convertido';
+  if (outcome.requiresHandoff) updates.notes = 'Handoff detectado en transcript';
+  if (failed) updates.notes = 'La conversación terminó con error';
+
+  const updated = updateJsonByField(
+    CALLS_LOG_PATH,
+    'conversation_id',
+    conversationId,
+    updates,
+  );
+
+  return { ...outcome, updated };
 }
 
 // ─────────────────────────────────────────────
@@ -272,6 +317,10 @@ app.post('/call/batch', async (req, res) => {
   if (!Array.isArray(donors) || donors.length === 0) {
     return res.status(400).json({ error: 'El body debe ser un array de donantes.' });
   }
+  const invalidRow = donors.findIndex(donor => !donor || !donor.phone);
+  if (invalidRow !== -1) {
+    return res.status(400).json({ error: `La fila ${invalidRow + 1} no tiene "phone".` });
+  }
   if (!AGENT_ID || !AGENT_PHONE_NUMBER_ID) {
     return res.status(503).json({ error: 'Setup incompleto. Corre npm run setup.' });
   }
@@ -287,6 +336,13 @@ app.post('/call/batch', async (req, res) => {
   const campaignId = randomUUID();
   const startTime  = Date.now();
   console.log(`[/call/batch] Campana ${campaignId} iniciada: ${donors.length} donantes, 30s entre llamadas.`);
+  appendJson(CAMPAIGNS_LOG_PATH, {
+    batch_id:     campaignId,
+    status:       'running',
+    total:        donors.length,
+    started_at:   new Date(startTime).toISOString(),
+    completed_at: null,
+  });
 
   res.json({
     ok:          true,
@@ -365,20 +421,15 @@ app.post('/call/batch', async (req, res) => {
       results.push(logEntry);
     }
 
-    // Guardar resumen de campaña
+    // Guardar el cierre del envío. Las conversiones y handoffs se calculan
+    // dinámicamente en GET /campaigns cuando terminan las conversaciones.
     const campaignSummary = {
-      batch_id:               campaignId,
-      total:                  donors.length,
-      exitosas:               results.filter(r => r.status === 'initiated').length,
-      convertidos:            0,
-      handoffs:               0,
-      fallidas:               results.filter(r => r.status === 'failed').length,
-      encoladas:              results.filter(r => r.status === 'queued').length,
+      status:                 'completed',
+      ...getCampaignStats(results, campaignId),
       duracion_total_minutos: Math.round((Date.now() - startTime) / 60000),
-      started_at:             new Date(startTime).toISOString(),
       completed_at:           new Date().toISOString(),
     };
-    appendJson(CAMPAIGNS_LOG_PATH, campaignSummary);
+    updateJsonByField(CAMPAIGNS_LOG_PATH, 'batch_id', campaignId, campaignSummary);
     console.log(`[/call/batch] Campana ${campaignId} completada. Resumen:`, campaignSummary);
   })();
 });
@@ -465,10 +516,6 @@ app.post('/webhook/elevenlabs', async (req, res) => {
     return res.status(400).json({ error: 'Payload sin conversation_id' });
   }
 
-  const transcriptText = Array.isArray(transcript)
-    ? transcript.map(t => t.message || '').join(' ')
-    : String(transcript);
-
   // Determinar si es Sofía o Valentina
   const isSofia     = agentId ? agentId === SOFIA_AGENT_ID : false;
   const isValentina = agentId ? agentId === AGENT_ID       : false;
@@ -489,31 +536,13 @@ app.post('/webhook/elevenlabs', async (req, res) => {
     return res.json({ ok: true, conversation_id: conversationId, handled_by: 'sofia' });
   }
 
+  if (!actingValentina || !matchedCall) {
+    return res.json({ ok: true, conversation_id: conversationId, handled_by: 'ignored' });
+  }
+
   // ── VALENTINA: detectar conversión y handoff en transcript ──
-  const CONVERTED_KEYWORDS = [
-    'si quiero donar', 'como hago para donar', 'me anoto',
-    'dale', 'si me interesa', 'como lo hago', 'por supuesto',
-    'claro que si', 'cuanto seria', 'como pago',
-  ];
-  const HANDOFF_KEYWORDS = [
-    'handoff', 'te llaman', 'alguien del equipo', 'te contactamos',
-    'te paso con', 'hablo con alguien', 'no soy la indicada',
-    'un humano', 'una persona', 'del equipo te va a llamar',
-    'te van a contactar',
-  ];
-
-  const lowerText = normalizeText(transcriptText + ' ' + summary);
-
-  const isConverted    = CONVERTED_KEYWORDS.some(kw => lowerText.includes(normalizeText(kw)));
-  const requiresHandoff = !isConverted && HANDOFF_KEYWORDS.some(kw => lowerText.includes(normalizeText(kw)));
-
-  const newStatus = isConverted ? 'converted' : (requiresHandoff ? 'handoff_required' : 'completed');
-  const updated = updateJsonByField(CALLS_LOG_PATH, 'conversation_id', conversationId, {
-    status:     newStatus,
-    updated_at: new Date().toISOString(),
-    ...(isConverted    && { notes: 'Donante convertido' }),
-    ...(requiresHandoff && { notes: 'Handoff detectado en transcript' }),
-  });
+  const { status: newStatus, isConverted, requiresHandoff, updated } =
+    updateValentinaOutcome({ conversationId, transcript, summary });
 
   if (isConverted && updated) {
     const call = readJson(CALLS_LOG_PATH).find(c => c.conversation_id === conversationId);
@@ -661,7 +690,12 @@ app.get('/ongs', (_req, res) => {
 
 app.get('/campaigns', (_req, res) => {
   const campaigns = readJson(CAMPAIGNS_LOG_PATH);
-  res.json({ total: campaigns.length, campaigns: [...campaigns].reverse() });
+  const calls = readJson(CALLS_LOG_PATH);
+  const withCurrentStats = campaigns.map(campaign => ({
+    ...campaign,
+    ...getCampaignStats(calls, campaign.batch_id),
+  }));
+  res.json({ total: campaigns.length, campaigns: withCurrentStats.reverse() });
 });
 
 // ─────────────────────────────────────────────
@@ -672,7 +706,14 @@ app.get('/dashboard', (_req, res) => {
   const calls = readJson(CALLS_LOG_PATH);
   const ongs  = readJson(ONG_PROFILES_PATH);
 
-  const exitosas    = calls.filter(c => c.status === 'initiated' || c.status === 'completed').length;
+  const successfulStatuses = new Set([
+    'initiated',
+    'completed',
+    'converted',
+    'handoff_required',
+    'resolved',
+  ]);
+  const exitosas    = calls.filter(c => successfulStatuses.has(c.status)).length;
   const convertidos = calls.filter(c => c.status === 'converted').length;
   const handoffs    = calls.filter(c => c.status === 'handoff_required');
   const ultima      = calls.length > 0 ? calls[calls.length - 1].timestamp : null;
@@ -795,12 +836,13 @@ async function retryAndProcessCalls() {
 // Arranque
 // ─────────────────────────────────────────────
 
-setTimeout(() => {
-  pollPendingOnboardings();
-  setInterval(pollPendingOnboardings, 60_000);
-}, 30_000);
-
-setInterval(retryAndProcessCalls, 2 * 60 * 60 * 1000);
+if (!DISABLE_BACKGROUND_JOBS) {
+  setTimeout(() => {
+    pollPendingOnboardings();
+    setInterval(pollPendingOnboardings, 60_000);
+  }, 30_000);
+  setInterval(retryAndProcessCalls, 2 * 60 * 60 * 1000);
+}
 
 app.listen(PORT, () => {
   console.log(`\nvoice-bot escuchando en http://localhost:${PORT}`);
