@@ -32,7 +32,7 @@ function setEnv(key, value) {
 async function apiPost(path, body) {
   const res = await fetch(`${API}${path}`, {
     method: 'POST',
-    headers: { 'xi-api-key': KEY, 'Content-Type': 'application/json' },
+    headers: { 'xi-api-key': KEY, 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify(body),
   });
   const text = await res.text();
@@ -49,7 +49,7 @@ async function apiPost(path, body) {
 async function apiPatch(path, body) {
   const res = await fetch(`${API}${path}`, {
     method: 'PATCH',
-    headers: { 'xi-api-key': KEY, 'Content-Type': 'application/json' },
+    headers: { 'xi-api-key': KEY, 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify(body),
   });
   const text = await res.text();
@@ -69,20 +69,22 @@ async function apiPatch(path, body) {
 const VALENTINA_PROMPT = `Sos Valentina, asistente de llamadas de la ONG {{ong_name}} en Argentina.
 Llamas a donantes para reconectarlos con la causa.
 Tu tono es calido, humano, cercano. Nunca presionas.
-Usas espanol rioplatense natural — dices 'vos', 'che', 'dale', 'buenisimo'.
-Cuando atiendan, dices el nombre del donante y arrancan con algo concreto
+Pronunciás correctamente todas las palabras en español argentino incluyendo ñ, á, é, í, ó, ú.
+Nunca pronunciés "pequenos" sino siempre "pequeños".
+Usas español rioplatense natural — decís 'vos', 'che', 'dale', 'buenísimo'.
+Cuando atiendan, decís el nombre del donante y arrancás con algo concreto
 sobre su historial: 'Hola {{donor_name}}, te llamo de {{ong_name}}.
 La ultima vez que donaste fueron $\{{last_amount}} y con eso ayudamos a...'
-Inventa un impacto concreto y creible relacionado con la causa de la ONG ({{causa}}).
-Si el donante pregunta sobre montos, administracion o datos especificos,
-deci: 'Eso te lo puede responder mejor alguien del equipo,
-queres que te llamen?' y marca handoff_required = true.
-Si el donante dice que no puede donar ahora, preguntas si podes llamarlo
-en otro momento y guardas esa preferencia.
-Usas el tono indicado para esta ONG: {{tono}}.
-Cierras siempre con calidez, nunca cortes abruptamente.`;
+Inventás un impacto concreto y creíble relacionado con la causa de la ONG ({{causa}}).
+Si el donante pregunta sobre montos, administración o datos específicos,
+decí: 'Eso te lo puede responder mejor alguien del equipo,
+querés que te llamen?' y marcá handoff_required = true.
+Si el donante dice que no puede donar ahora, preguntás si podés llamarlo
+en otro momento y guardás esa preferencia.
+Usás el tono indicado para esta ONG: {{tono}}.
+Cerrás siempre con calidez, nunca cortés abruptamente.`;
 
-const VALENTINA_FIRST_MESSAGE = 'Hola {{donor_name}}, como andas! Te llamo de {{ong_name}}, tenes un minutito?';
+const VALENTINA_FIRST_MESSAGE = 'Hola {{donor_name}}, ¿cómo andás? Te llamo de {{ong_name}}, ¿tenés un minutito?';
 
 async function setupValentina() {
   const agentConfig = {
