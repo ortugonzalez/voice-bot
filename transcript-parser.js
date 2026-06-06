@@ -48,6 +48,16 @@ export async function parseTranscriptAndUpdate({ conversationId, ongId }) {
     .map(t => `${t.role === 'agent' ? 'Sofía' : 'ONG'}: ${t.message}`)
     .join('\n');
 
+  // Buscar perfil existente para usar como fallback
+  const profiles = readProfiles();
+  const idx = profiles.findIndex(p =>
+    p.ong_id === ongId || p.conversation_id === conversationId
+  );
+  if (idx === -1) {
+    throw new Error(`No se encontró perfil con ong_id="${ongId}" o conversation_id="${conversationId}"`);
+  }
+  const existing = profiles[idx];
+
   // 2. Enviar a OpenAI gpt-4o-mini para extraer datos estructurados
   const client = new OpenAI({ apiKey: openaiKey });
 
@@ -73,34 +83,48 @@ ${transcriptText}`,
     }],
   });
 
-  // 3. Parsear respuesta
+  // 3. Parsear respuesta de OpenAI
   const rawText = completion.choices[0].message.content.trim();
   let extracted;
   try {
     const match = rawText.match(/\{[\s\S]*\}/);
     extracted = JSON.parse(match ? match[0] : rawText);
   } catch {
-    throw new Error(`OpenAI devolvió JSON inválido: ${rawText.slice(0, 200)}`);
+    // JSON inválido: guardar transcript raw para revisión manual
+    console.warn(`[transcript-parser] JSON inválido de OpenAI para ${conversationId}. Guardando con status parse_error.`);
+    profiles[idx] = {
+      ...existing,
+      status:         'parse_error',
+      raw_transcript: transcriptText,
+      updated_at:     new Date().toISOString(),
+    };
+    saveProfiles(profiles);
+    return profiles[idx];
   }
 
-  // 4. Actualizar perfil en ong-profiles.json (solo campos no vacíos)
-  const profiles = readProfiles();
-  const idx = profiles.findIndex(p =>
-    p.ong_id === ongId || p.conversation_id === conversationId
-  );
-
-  if (idx === -1) {
-    throw new Error(`No se encontró perfil con ong_id="${ongId}" o conversation_id="${conversationId}"`);
+  // 4. Validar y aplicar defaults antes de guardar
+  // ong_name: si viene vacío, mantener el que ya estaba en el perfil
+  if (!extracted.ong_name) {
+    extracted.ong_name = existing.ong_name;
+  }
+  // tono: default 'cercano' si no se detectó
+  if (!extracted.tono) {
+    extracted.tono = 'cercano';
+  }
+  // causa: advertencia si falta, pero no bloquea
+  if (!extracted.causa) {
+    console.warn(`[transcript-parser] No se detectó causa en el transcript de "${extracted.ong_name}" (${conversationId})`);
   }
 
+  // Solo pisar campos no vacíos (los vacíos se ignoran para no borrar datos previos)
   const nonEmpty = Object.fromEntries(
     Object.entries(extracted).filter(([, v]) => v !== '' && v != null)
   );
 
   profiles[idx] = {
-    ...profiles[idx],
+    ...existing,
     ...nonEmpty,
-    status: 'completed',
+    status:     'completed',
     updated_at: new Date().toISOString(),
   };
   saveProfiles(profiles);

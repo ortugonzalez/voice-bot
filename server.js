@@ -122,7 +122,7 @@ function getONGOverride(ongName) {
   const profile = profiles.find(p =>
     p.ong_name === ongName &&
     p.status === 'completed' &&
-    (p.causa || p.tono || p.impacto_mensaje)
+    p.causa && p.tono && p.impacto_mensaje
   );
   if (!profile) return null;
   return {
@@ -162,7 +162,9 @@ app.post('/call', async (req, res) => {
 
   const configOverride = getONGOverride(ong_name);
   if (configOverride) {
-    console.log(`[/call] Usando perfil completo de "${ong_name}" para override.`);
+    console.log(`[/call] Usando perfil completo de "${ong_name}"`);
+  } else {
+    console.log(`[/call] Usando prompt genérico${ong_name ? ` (perfil de "${ong_name}" incompleto o no encontrado)` : ''}`);
   }
 
   const dynamicVars = {
@@ -234,6 +236,10 @@ app.post('/call/batch', async (req, res) => {
       }
       const { phone, donor_name, last_amount, ong_name, causa, tono, impacto_mensaje } = donors[i];
       const configOverride = getONGOverride(ong_name);
+      console.log(configOverride
+        ? `[/call/batch] Usando perfil completo de "${ong_name}"`
+        : `[/call/batch] Usando prompt genérico${ong_name ? ` ("${ong_name}" incompleto)` : ''}`
+      );
       const logEntry = {
         call_id:         randomUUID(),
         campaign_id:     campaignId,
@@ -377,7 +383,12 @@ app.post('/webhook/elevenlabs', async (req, res) => {
   }
 
   // ── VALENTINA: detectar handoff en transcript ──────────────
-  const HANDOFF_KEYWORDS = ['handoff', 'te llaman', 'alguien del equipo', 'te contactamos'];
+  const HANDOFF_KEYWORDS = [
+    'handoff', 'te llaman', 'alguien del equipo', 'te contactamos',
+    'te paso con', 'hablo con alguien', 'no soy la indicada',
+    'un humano', 'una persona', 'del equipo te va a llamar',
+    'te van a contactar',
+  ];
   const lowerText = (transcriptText + ' ' + summary).toLowerCase();
   const requiresHandoff = HANDOFF_KEYWORDS.some(kw => lowerText.includes(kw));
 
