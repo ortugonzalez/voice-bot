@@ -219,30 +219,18 @@ async function importPhoneNumber() {
 }
 
 // ─────────────────────────────────────────────
-// WEBHOOKS — configurar post_call_webhook en ambos agentes
+// NOTA: ElevenLabs post-call webhook via API requiere un webhook_id
+// registrado en el dashboard. El servidor usa polling automático
+// cada 60s como alternativa sin configuración manual.
 // ─────────────────────────────────────────────
 
 const WEBHOOK_URL = 'https://voice-bot-production-63d2.up.railway.app/webhook/elevenlabs';
 
 async function configureWebhooks() {
-  const agents = [
-    { id: process.env.AGENT_ID,       name: 'Valentina' },
-    { id: process.env.SOFIA_AGENT_ID, name: 'Sofia'     },
-  ];
-  for (const { id, name } of agents) {
-    if (!id) { console.log(`  ${name}: sin ID en .env, salteando.`); continue; }
-    console.log(`Configurando webhook de ${name} (${id})...`);
-    try {
-      await apiPatch(`/v1/convai/agents/${id}`, {
-        platform_settings: {
-          webhooks: { post_call_webhook_url: WEBHOOK_URL },
-        },
-      });
-      console.log(`  OK -> ${WEBHOOK_URL}`);
-    } catch (e) {
-      console.warn(`  No se pudo configurar (${e.message})`);
-    }
-  }
+  console.log(`\nWebhook URL: ${WEBHOOK_URL}`);
+  console.log('  ElevenLabs post-call webhook requiere configuracion en el dashboard web.');
+  console.log('  El servidor completa perfiles via polling automatico cada 60s.');
+  console.log('  Alternativa manual: POST /onboarding/complete { conversation_id, ong_id }');
 }
 
 // ─────────────────────────────────────────────

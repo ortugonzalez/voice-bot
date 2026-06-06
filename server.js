@@ -509,8 +509,47 @@ app.get('/dashboard', (_req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// Background polling: completa perfiles de onboarding
+// ElevenLabs no expone webhook via API; chequeamos cada 60s
+// si la conversación de Sofía ya terminó y parseamos el transcript.
+// ─────────────────────────────────────────────
+
+async function pollPendingOnboardings() {
+  if (!process.env.OPENAI_API_KEY || !ELEVENLABS_API_KEY) return;
+
+  const pending = readJson(ONG_PROFILES_PATH)
+    .filter(p => p.status === 'call_initiated' && p.conversation_id);
+
+  for (const profile of pending) {
+    try {
+      const r = await fetch(`${API}/v1/convai/conversations/${profile.conversation_id}`, {
+        headers: { 'xi-api-key': ELEVENLABS_API_KEY },
+      });
+      if (!r.ok) continue;
+      const conv = await r.json();
+
+      // Procesar solo si la conversación terminó (transcript tiene mensajes y status != 'processing')
+      const ended = conv.status && conv.status !== 'processing';
+      const hasTranscript = Array.isArray(conv.transcript) && conv.transcript.length > 0;
+      if (!ended && !hasTranscript) continue;
+
+      await parseTranscriptAndUpdate({ conversationId: profile.conversation_id, ongId: profile.ong_id });
+      console.log(`[poll] Perfil de ONG completado automaticamente: ${profile.ong_name}`);
+    } catch {
+      // Silencioso — reintenta en el próximo ciclo
+    }
+  }
+}
+
+// ─────────────────────────────────────────────
 // Arranque
 // ─────────────────────────────────────────────
+
+// Iniciar polling 30s después del arranque para no solapar con el boot
+setTimeout(() => {
+  pollPendingOnboardings();
+  setInterval(pollPendingOnboardings, 60_000);
+}, 30_000);
 
 app.listen(PORT, () => {
   console.log(`\nvoice-bot escuchando en http://localhost:${PORT}`);
