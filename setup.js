@@ -69,7 +69,7 @@ async function createAgent() {
   console.log('Creando agente "Valentina"...');
   const body = {
     name: 'Valentina - Reactivacion Donantes (WIS)',
-    conversational_config: {
+    conversation_config: {
       agent: {
         prompt: { prompt: SYSTEM_PROMPT, llm: process.env.ELEVENLABS_LLM },
         first_message: FIRST_MESSAGE,
@@ -88,7 +88,7 @@ async function createAgent() {
     // Si el LLM elegido no esta disponible, reintento sin fijar llm (usa el default).
     if (String(e.message).includes('llm') || String(e.message).includes('422')) {
       console.warn('  Reintento sin fijar LLM (uso el default del agente)...');
-      delete body.conversational_config.agent.prompt.llm;
+      delete body.conversation_config.agent.prompt.llm;
       data = await api('/v1/convai/agents/create', body);
     } else {
       throw e;
