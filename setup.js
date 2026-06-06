@@ -219,6 +219,33 @@ async function importPhoneNumber() {
 }
 
 // ─────────────────────────────────────────────
+// WEBHOOKS — configurar post_call_webhook en ambos agentes
+// ─────────────────────────────────────────────
+
+const WEBHOOK_URL = 'https://voice-bot-production-63d2.up.railway.app/webhook/elevenlabs';
+
+async function configureWebhooks() {
+  const agents = [
+    { id: process.env.AGENT_ID,       name: 'Valentina' },
+    { id: process.env.SOFIA_AGENT_ID, name: 'Sofia'     },
+  ];
+  for (const { id, name } of agents) {
+    if (!id) { console.log(`  ${name}: sin ID en .env, salteando.`); continue; }
+    console.log(`Configurando webhook de ${name} (${id})...`);
+    try {
+      await apiPatch(`/v1/convai/agents/${id}`, {
+        platform_settings: {
+          webhooks: { post_call_webhook_url: WEBHOOK_URL },
+        },
+      });
+      console.log(`  OK -> ${WEBHOOK_URL}`);
+    } catch (e) {
+      console.warn(`  No se pudo configurar (${e.message})`);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────
 // MAIN
 // ─────────────────────────────────────────────
 
@@ -227,11 +254,13 @@ async function importPhoneNumber() {
     const valentinId = await setupValentina();
     const sofiaId    = await setupSofia();
     const phoneId    = await importPhoneNumber();
+    await configureWebhooks();
 
     console.log('\n=== SETUP OK ===');
-    console.log(`AGENT_ID (Valentina)  = ${valentinId}`);
+    console.log(`AGENT_ID (Valentina)   = ${valentinId}`);
     console.log(`SOFIA_AGENT_ID (Sofia) = ${sofiaId}`);
     console.log(`AGENT_PHONE_NUMBER_ID  = ${phoneId}`);
+    console.log(`WEBHOOK_URL            = ${WEBHOOK_URL}`);
     console.log('\nListo. Levanta el server con `npm start`.');
   } catch (e) {
     console.error('\n=== SETUP FALLO ===');

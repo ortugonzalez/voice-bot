@@ -343,18 +343,43 @@ app.post('/webhook/elevenlabs', async (req, res) => {
 
   // Normalizar distintos formatos de payload de ElevenLabs
   const conversationId = body.conversation_id ?? body.data?.conversation_id ?? null;
+  const agentId        = body.agent_id        ?? body.data?.agent_id        ?? null;
   const transcript     = body.transcript      ?? body.data?.transcript      ?? [];
-  const summary        = body.summary         ?? body.data?.summary         ?? '';
+  const summary        = body.summary         ?? body.data?.analysis?.transcript_summary ?? body.data?.summary ?? '';
 
   if (!conversationId) {
     return res.status(400).json({ error: 'Payload sin conversation_id' });
   }
 
-  // Detectar handoff en transcript o summary
   const transcriptText = Array.isArray(transcript)
     ? transcript.map(t => t.message || '').join(' ')
     : String(transcript);
-  const requiresHandoff = /handoff/i.test(transcriptText) || /handoff/i.test(summary);
+
+  // Determinar si es Sofia o Valentina
+  const isSofia     = agentId ? agentId === SOFIA_AGENT_ID : false;
+  const isValentina = agentId ? agentId === AGENT_ID       : false;
+
+  // Si no hay agent_id, inferir por los registros locales
+  const ongs  = readJson(ONG_PROFILES_PATH);
+  const calls = readJson(CALLS_LOG_PATH);
+  const pendingOng  = ongs.find(p => p.conversation_id === conversationId && p.status === 'call_initiated');
+  const matchedCall = calls.find(c => c.conversation_id === conversationId);
+
+  const actingSofia     = isSofia     || (!agentId && Boolean(pendingOng));
+  const actingValentina = isValentina || (!agentId && Boolean(matchedCall) && !pendingOng);
+
+  // ── SOFIA: parsear perfil de ONG automáticamente ───────────
+  if (actingSofia && pendingOng && process.env.OPENAI_API_KEY) {
+    parseTranscriptAndUpdate({ conversationId, ongId: pendingOng.ong_id })
+      .then(p => console.log(`[webhook] Perfil de ONG actualizado automaticamente: ${p.ong_name} (${p.ong_id})`))
+      .catch(e => console.warn(`[webhook] Auto-parse fallo: ${e.message}`));
+    return res.json({ ok: true, conversation_id: conversationId, handled_by: 'sofia' });
+  }
+
+  // ── VALENTINA: detectar handoff en transcript ──────────────
+  const HANDOFF_KEYWORDS = ['handoff', 'te llaman', 'alguien del equipo', 'te contactamos'];
+  const lowerText = (transcriptText + ' ' + summary).toLowerCase();
+  const requiresHandoff = HANDOFF_KEYWORDS.some(kw => lowerText.includes(kw));
 
   const newStatus = requiresHandoff ? 'handoff_required' : 'completed';
   const updated = updateJsonByField(CALLS_LOG_PATH, 'conversation_id', conversationId, {
@@ -363,21 +388,14 @@ app.post('/webhook/elevenlabs', async (req, res) => {
     ...(requiresHandoff && { notes: 'Handoff detectado en transcript' }),
   });
 
-  if (updated) {
-    console.log(`[/webhook] conv=${conversationId} => ${newStatus}`);
+  if (requiresHandoff && updated) {
+    const call = readJson(CALLS_LOG_PATH).find(c => c.conversation_id === conversationId);
+    const who  = call ? `${call.donor_name} ${call.donor_phone}` : conversationId;
+    console.log(`⚠️  HANDOFF: ${who}`);
+  } else if (updated) {
+    console.log(`[webhook] conv=${conversationId} => ${newStatus}`);
   } else {
-    console.log(`[/webhook] conv=${conversationId} no encontrado en calls-log (puede ser de onboarding)`);
-  }
-
-  // Auto-parsear si es una conversacion de onboarding pendiente
-  if (process.env.OPENAI_API_KEY) {
-    const ongs = readJson(ONG_PROFILES_PATH);
-    const pending = ongs.find(p => p.conversation_id === conversationId && p.status === 'call_initiated');
-    if (pending) {
-      parseTranscriptAndUpdate({ conversationId, ongId: pending.ong_id })
-        .then(p => console.log(`[/webhook] Onboarding auto-completado: ${p.ong_name}`))
-        .catch(e => console.warn(`[/webhook] Auto-parse fallo: ${e.message}`));
-    }
+    console.log(`[webhook] conv=${conversationId} sin registro local (ignorado)`);
   }
 
   res.json({ ok: true, conversation_id: conversationId, status: newStatus });
