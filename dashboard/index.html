@@ -33,164 +33,143 @@
 
     /* ── Header ── */
     header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 18px 28px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 28px;
       border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      background: rgba(10,10,10,0.88);
+      position: sticky; top: 0;
+      background: rgba(10,10,10,0.9);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       z-index: 100;
     }
     .logo { display: flex; align-items: center; gap: 12px; }
     .logo-mark {
-      width: 32px; height: 32px;
-      background: var(--accent);
-      border-radius: 7px;
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Space Mono', monospace;
-      font-size: 14px; font-weight: 700;
+      width: 32px; height: 32px; background: var(--accent);
+      border-radius: 7px; display: flex; align-items: center; justify-content: center;
+      font-family: 'Space Mono', monospace; font-size: 14px; font-weight: 700;
       color: #0A0A0A; flex-shrink: 0;
     }
-    .logo-text { font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+    .logo-text { font-weight: 700; font-size: 15px; letter-spacing: -.3px; }
     .logo-sub  { font-size: 11px; color: var(--muted); }
-    .header-right { display: flex; align-items: center; gap: 10px; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
     .status-pill {
       display: flex; align-items: center; gap: 6px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 5px 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
       font-size: 12px; color: var(--muted);
     }
-    .dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--muted);
-      transition: background 0.4s;
-    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); transition: background .4s; }
     .dot.online { background: var(--success); animation: pulse 2.5s ease-in-out infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
     .btn-primary {
-      background: var(--accent); color: #0A0A0A;
-      border: none; border-radius: var(--radius);
-      padding: 8px 18px; font-weight: 600; font-size: 13px;
-      cursor: pointer; font-family: inherit;
-      transition: opacity .15s;
+      background: var(--accent); color: #0A0A0A; border: none;
+      border-radius: var(--radius); padding: 8px 16px;
+      font-weight: 600; font-size: 13px; cursor: pointer;
+      font-family: inherit; transition: opacity .15s; white-space: nowrap;
     }
     .btn-primary:hover { opacity: .82; }
     .btn-primary:disabled { opacity: .5; cursor: default; }
+    .btn-secondary {
+      background: transparent; color: var(--muted);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 8px 14px; font-size: 13px; font-weight: 500;
+      cursor: pointer; font-family: inherit; transition: color .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .btn-secondary:hover { color: var(--text); border-color: #444; }
+    .btn-sm {
+      background: rgba(240,180,41,0.1); color: var(--accent);
+      border: 1px solid rgba(240,180,41,0.25); border-radius: 6px;
+      padding: 4px 10px; font-size: 11px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: background .15s;
+      white-space: nowrap;
+    }
+    .btn-sm:hover { background: rgba(240,180,41,0.2); }
+    .btn-resolve {
+      background: rgba(34,197,94,0.08); color: #4ade80;
+      border: 1px solid rgba(34,197,94,0.2); border-radius: 6px;
+      padding: 4px 10px; font-size: 11px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: background .15s;
+      white-space: nowrap;
+    }
+    .btn-resolve:hover { background: rgba(34,197,94,0.15); }
 
     /* ── Main ── */
-    main { max-width: 1160px; margin: 0 auto; padding: 28px 28px 60px; }
-
-    /* ── Meta row ── */
+    main { max-width: 1200px; margin: 0 auto; padding: 26px 28px 60px; }
     .meta-row {
       display: flex; align-items: center; justify-content: flex-end;
-      margin-bottom: 20px;
-      font-family: 'Space Mono', monospace;
-      font-size: 11px; color: var(--muted);
+      margin-bottom: 18px;
+      font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted);
     }
 
     /* ── KPIs ── */
     .kpis {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-      margin-bottom: 24px;
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 14px; margin-bottom: 22px;
     }
     @media (max-width: 700px) { .kpis { grid-template-columns: repeat(2,1fr); } }
     .kpi {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px 20px 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 20px 16px;
     }
-    .kpi-label {
-      font-size: 10px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: .7px;
-      color: var(--muted); margin-bottom: 12px;
-    }
-    .kpi-value {
-      font-family: 'Space Mono', monospace;
-      font-size: 38px; font-weight: 700; line-height: 1;
-    }
-    .kpi-value.c-accent  { color: var(--accent); }
-    .kpi-value.c-orange  { color: var(--orange); }
+    .kpi-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 10px; }
+    .kpi-value { font-family: 'Space Mono', monospace; font-size: 36px; font-weight: 700; line-height: 1; }
+    .kpi-value.c-accent { color: var(--accent); }
+    .kpi-value.c-orange { color: var(--orange); }
     .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 7px; }
 
     /* ── Handoff alert ── */
     .handoff-alert {
       display: none;
-      background: rgba(249,115,22,0.07);
-      border: 1px solid rgba(249,115,22,0.28);
-      border-radius: var(--radius);
-      padding: 16px 20px;
-      margin-bottom: 22px;
+      background: rgba(249,115,22,0.07); border: 1px solid rgba(249,115,22,0.28);
+      border-radius: var(--radius); padding: 16px 20px; margin-bottom: 20px;
     }
     .handoff-alert.visible { display: block; }
-    .handoff-title {
-      font-size: 12px; font-weight: 700;
-      color: var(--orange); text-transform: uppercase; letter-spacing: .5px;
-      margin-bottom: 12px;
-    }
+    .handoff-title { font-size: 12px; font-weight: 700; color: var(--orange); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
     .handoff-item {
-      display: flex; align-items: center; gap: 14px;
-      padding: 8px 0;
-      border-bottom: 1px solid rgba(249,115,22,0.1);
-      font-size: 13px;
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 8px 0; border-bottom: 1px solid rgba(249,115,22,0.1); font-size: 13px;
     }
     .handoff-item:last-child { border-bottom: none; padding-bottom: 0; }
     .handoff-donor { font-weight: 600; }
     .handoff-phone { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
     .handoff-ong   { color: var(--orange); font-size: 12px; }
-    .handoff-time  { margin-left: auto; font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .handoff-time  { margin-left: auto; font-size: 11px; color: var(--muted); }
 
-    /* ── Card section ── */
+    /* ── Cards ── */
     .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      margin-bottom: 18px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; margin-bottom: 18px;
     }
     .card-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--border);
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
     }
     .card-title { font-size: 13px; font-weight: 600; letter-spacing: -.2px; }
     .card-count {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px; color: var(--muted);
-      background: var(--surface2);
-      border: 1px solid var(--border);
+      font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted);
+      background: var(--surface2); border: 1px solid var(--border);
       border-radius: 4px; padding: 3px 9px;
     }
 
     /* ── Tables ── */
     table { width: 100%; border-collapse: collapse; }
     thead th {
-      text-align: left;
-      font-size: 10px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: .6px;
-      color: var(--muted);
-      padding: 10px 20px;
-      border-bottom: 1px solid var(--border);
+      text-align: left; font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .6px; color: var(--muted);
+      padding: 10px 20px; border-bottom: 1px solid var(--border);
     }
     tbody td {
-      padding: 11px 20px;
-      font-size: 13px;
+      padding: 11px 20px; font-size: 13px;
       border-bottom: 1px solid rgba(255,255,255,0.04);
       vertical-align: middle;
     }
     tbody tr:last-child td { border-bottom: none; }
-    tbody tr:hover td { background: rgba(255,255,255,0.025); }
-    .mono  { font-family: 'Space Mono', monospace; font-size: 12px; }
-    .muted { color: var(--muted); }
-    .truncate { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    tbody tr:hover td { background: rgba(255,255,255,0.02); }
+    .mono    { font-family: 'Space Mono', monospace; font-size: 12px; }
+    .muted   { color: var(--muted); }
+    .truncate { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fw6 { font-weight: 600; }
 
     /* ── Badges ── */
     .badge {
@@ -208,23 +187,18 @@
     /* ── Empty ── */
     .empty { text-align: center; padding: 36px 20px; color: var(--muted); font-size: 13px; }
 
-    /* ── Modal backdrop ── */
+    /* ── Modals ── */
     .backdrop {
       display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.72);
-      backdrop-filter: blur(6px);
+      background: rgba(0,0,0,0.72); backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
-      z-index: 200;
-      align-items: center; justify-content: center;
+      z-index: 200; align-items: center; justify-content: center;
     }
     .backdrop.open { display: flex; }
     .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      width: 420px; max-width: 94vw;
-      padding: 28px;
-      animation: slideUp .2s ease;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; width: 420px; max-width: 94vw;
+      padding: 28px; animation: slideUp .2s ease;
     }
     @keyframes slideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
     .modal-head {
@@ -232,11 +206,11 @@
       margin-bottom: 22px;
     }
     .modal-title { font-size: 16px; font-weight: 700; }
+    .modal-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
     .btn-close {
       background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 6px; padding: 4px 11px;
-      cursor: pointer; color: var(--muted);
-      font-size: 15px; font-family: inherit; line-height: 1.4;
+      border-radius: 6px; padding: 4px 11px; cursor: pointer;
+      color: var(--muted); font-size: 15px; font-family: inherit; line-height: 1.4;
     }
     .btn-close:hover { color: var(--text); }
     .field { margin-bottom: 16px; }
@@ -247,14 +221,10 @@
     }
     label .req { color: var(--accent); }
     input, select {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: var(--text);
-      font-size: 14px; font-family: inherit;
-      outline: none; transition: border-color .15s;
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px; color: var(--text);
+      font-size: 14px; font-family: inherit; outline: none;
+      transition: border-color .15s;
     }
     input::placeholder { color: var(--muted); }
     input:focus, select:focus { border-color: var(--accent); }
@@ -277,16 +247,17 @@
       box-shadow: 0 8px 28px rgba(0,0,0,.55);
       transform: translateY(18px); opacity: 0;
       transition: all .28s ease;
-      z-index: 400; pointer-events: none;
-      max-width: 340px;
+      z-index: 400; pointer-events: none; max-width: 360px;
     }
     #toast.show { transform: translateY(0); opacity: 1; }
     #toast.ok  { border-color: rgba(34,197,94,.4); }
     #toast.err { border-color: rgba(239,68,68,.4); }
+    #toast.info { border-color: rgba(59,130,246,.4); }
   </style>
 </head>
 <body>
 
+<!-- Header -->
 <header>
   <div class="logo">
     <div class="logo-mark">W</div>
@@ -300,7 +271,8 @@
       <span class="dot" id="dot"></span>
       <span id="status-txt">Conectando…</span>
     </div>
-    <button class="btn-primary" onclick="openModal()">+ Nueva Llamada</button>
+    <button class="btn-secondary" onclick="openOnboardingModal()">Iniciar Onboarding</button>
+    <button class="btn-primary"   onclick="openCallModal()">+ Nueva Llamada</button>
   </div>
 </header>
 
@@ -331,7 +303,7 @@
     </div>
   </div>
 
-  <!-- Handoffs alert -->
+  <!-- Handoffs -->
   <div class="handoff-alert" id="handoff-alert">
     <div class="handoff-title">⚡ Handoffs que requieren accion</div>
     <div id="handoff-list"></div>
@@ -356,12 +328,15 @@
   </div>
 </main>
 
-<!-- Modal -->
-<div class="backdrop" id="backdrop" onclick="backdropClick(event)">
+<!-- Modal: Nueva Llamada -->
+<div class="backdrop" id="bd-call" onclick="backdropClick(event,'bd-call')">
   <div class="modal">
     <div class="modal-head">
-      <span class="modal-title">Nueva Llamada</span>
-      <button class="btn-close" onclick="closeModal()">✕</button>
+      <div>
+        <div class="modal-title">Nueva Llamada</div>
+        <div class="modal-sub">Valentina llamará al donante</div>
+      </div>
+      <button class="btn-close" onclick="closeModal('bd-call')">✕</button>
     </div>
     <div class="field">
       <label for="f-phone">Telefono <span class="req">*</span></label>
@@ -382,8 +357,33 @@
       </select>
     </div>
     <div class="modal-foot">
-      <button class="btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn-ghost" onclick="closeModal('bd-call')">Cancelar</button>
       <button class="btn-primary" id="btn-call" onclick="submitCall()">Llamar ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Iniciar Onboarding -->
+<div class="backdrop" id="bd-onboarding" onclick="backdropClick(event,'bd-onboarding')">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">Iniciar Onboarding</div>
+        <div class="modal-sub">Sofía llamará y recopilará los datos de la ONG</div>
+      </div>
+      <button class="btn-close" onclick="closeModal('bd-onboarding')">✕</button>
+    </div>
+    <div class="field">
+      <label for="o-phone">Telefono de la ONG <span class="req">*</span></label>
+      <input id="o-phone" type="tel" placeholder="+5492235428861" />
+    </div>
+    <div class="field">
+      <label for="o-ong">Nombre de la ONG <span class="req">*</span></label>
+      <input id="o-ong" type="text" placeholder="Fundación Ejemplo" />
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" onclick="closeModal('bd-onboarding')">Cancelar</button>
+      <button class="btn-primary" id="btn-onboarding" onclick="submitOnboarding()">Iniciar ▶</button>
     </div>
   </div>
 </div>
@@ -402,6 +402,8 @@
       pending:          ['b-gray',   'Pendiente'],
       call_initiated:   ['b-yellow', 'En proceso'],
       call_failed:      ['b-red',    'Fallida'],
+      parse_error:      ['b-red',    'Error parse'],
+      resolved:         ['b-gray',   'Resuelto'],
     };
     const [cls, lbl] = map[status] || ['b-gray', status || '—'];
     return `<span class="badge ${cls}">${lbl}</span>`;
@@ -424,7 +426,7 @@
 
   function esc(s) {
     if (!s) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   function toast(msg, type = 'ok') {
@@ -432,10 +434,10 @@
     el.textContent = msg;
     el.className = `show ${type}`;
     clearTimeout(el._tid);
-    el._tid = setTimeout(() => el.className = '', 3600);
+    el._tid = setTimeout(() => el.className = '', 4000);
   }
 
-  // ── Data & Render ─────────────────────────────────────────
+  // ── Refresh ───────────────────────────────────────────────
 
   async function refresh() {
     try {
@@ -445,11 +447,9 @@
         fetch('/ongs').then(r => r.json()),
       ]);
 
-      // Status
       document.getElementById('dot').className = 'dot online';
       document.getElementById('status-txt').textContent = 'Online';
-      document.getElementById('ts').textContent =
-        'Actualizado: ' + new Date().toLocaleTimeString('es-AR');
+      document.getElementById('ts').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-AR');
 
       // KPIs
       document.getElementById('k-ongs').textContent  = dash.total_ongs      ?? 0;
@@ -460,7 +460,7 @@
       const n = dash.total_llamadas, x = dash.llamadas_exitosas;
       document.getElementById('k-pct').textContent = n > 0 ? `${Math.round(x/n*100)}% de exito` : '—';
 
-      // Handoffs
+      // Handoffs con botón "Marcar resuelto"
       const hands = dash.handoffs_detail || [];
       const alertEl = document.getElementById('handoff-alert');
       if (hands.length > 0) {
@@ -471,6 +471,7 @@
             <span class="handoff-phone">${esc(h.donor_phone) || ''}</span>
             <span class="handoff-ong">${esc(h.ong_name) || ''}</span>
             <span class="handoff-time">${ago(h.timestamp)}</span>
+            <button class="btn-resolve" onclick="resolveHandoff('${esc(h.call_id)}')">Marcar resuelto ✓</button>
           </div>`).join('');
       } else {
         alertEl.classList.remove('visible');
@@ -479,103 +480,164 @@
       // Calls table
       const calls = (callsData.calls || []).slice().reverse().slice(0, 10);
       document.getElementById('cnt-calls').textContent = callsData.total || 0;
-      if (calls.length === 0) {
-        document.getElementById('tbl-calls').innerHTML = '<div class="empty">Sin llamadas registradas aun</div>';
-      } else {
-        document.getElementById('tbl-calls').innerHTML = `<table>
-          <thead><tr>
-            <th>Hora</th><th>Donante</th><th>ONG</th><th>Donacion</th><th>Estado</th><th>Telefono</th>
-          </tr></thead>
-          <tbody>${calls.map(c => `<tr>
-            <td class="mono muted">${hhmm(c.timestamp)}</td>
-            <td>${esc(c.donor_name) || '—'}</td>
-            <td class="muted truncate">${esc(c.ong_name) || '—'}</td>
-            <td class="mono">${c.last_amount ? '$' + esc(c.last_amount) : '—'}</td>
-            <td>${badge(c.status)}</td>
-            <td class="mono muted">${esc(c.donor_phone) || '—'}</td>
-          </tr>`).join('')}</tbody>
-        </table>`;
-      }
+      document.getElementById('tbl-calls').innerHTML = calls.length === 0
+        ? '<div class="empty">Sin llamadas registradas aun</div>'
+        : `<table>
+            <thead><tr>
+              <th>Hora</th><th>Donante</th><th>ONG</th><th>Donacion</th><th>Estado</th><th>Telefono</th>
+            </tr></thead>
+            <tbody>${calls.map(c => `<tr>
+              <td class="mono muted">${hhmm(c.timestamp)}</td>
+              <td class="fw6">${esc(c.donor_name)||'—'}</td>
+              <td class="muted truncate">${esc(c.ong_name)||'—'}</td>
+              <td class="mono">${c.last_amount ? '$'+esc(c.last_amount) : '—'}</td>
+              <td>${badge(c.status)}</td>
+              <td class="mono muted">${esc(c.donor_phone)||'—'}</td>
+            </tr>`).join('')}</tbody>
+          </table>`;
 
-      // ONGs table
+      // ONGs table con botón "Llamar donante ▶" para las completed
       const ongs = ongsData.ongs || [];
       document.getElementById('cnt-ongs').textContent = ongsData.total || 0;
 
-      // Sync select
+      // Sync select en modal de llamada
       const sel = document.getElementById('f-ong');
       const prev = sel.value;
       sel.innerHTML = '<option value="">— Seleccionar ONG —</option>' +
-        ongs.map(o => `<option value="${esc(o.ong_name)}">${esc(o.ong_name || 'Sin nombre')}</option>`).join('');
+        ongs.map(o => `<option value="${esc(o.ong_name)}">${esc(o.ong_name||'Sin nombre')}</option>`).join('');
       if (prev) sel.value = prev;
 
-      if (ongs.length === 0) {
-        document.getElementById('tbl-ongs').innerHTML = '<div class="empty">Sin ONGs registradas aun</div>';
-      } else {
-        document.getElementById('tbl-ongs').innerHTML = `<table>
-          <thead><tr>
-            <th>Organizacion</th><th>Causa</th><th>Tono</th><th>Donantes</th><th>Estado</th>
-          </tr></thead>
-          <tbody>${ongs.map(o => `<tr>
-            <td style="font-weight:600">${esc(o.ong_name) || '—'}</td>
-            <td class="muted truncate">${esc(o.causa) || '—'}</td>
-            <td>${esc(o.tono) || '—'}</td>
-            <td class="mono">${esc(o.donantes_activos) || '—'}</td>
-            <td>${badge(o.status)}</td>
-          </tr>`).join('')}</tbody>
-        </table>`;
-      }
+      document.getElementById('tbl-ongs').innerHTML = ongs.length === 0
+        ? '<div class="empty">Sin ONGs registradas aun</div>'
+        : `<table>
+            <thead><tr>
+              <th>Organizacion</th><th>Causa</th><th>Tono</th><th>Donantes</th><th>Estado</th><th>Accion</th>
+            </tr></thead>
+            <tbody>${ongs.map(o => `<tr>
+              <td class="fw6">${esc(o.ong_name)||'—'}</td>
+              <td class="muted truncate">${esc(o.causa)||'—'}</td>
+              <td>${esc(o.tono)||'—'}</td>
+              <td class="mono">${esc(o.donantes_activos)||'—'}</td>
+              <td>${badge(o.status)}</td>
+              <td>${o.status === 'completed'
+                ? `<button class="btn-sm" onclick="openCallModal('${esc(o.ong_name)}')">Llamar donante ▶</button>`
+                : '—'}</td>
+            </tr>`).join('')}</tbody>
+          </table>`;
 
-    } catch (err) {
+    } catch {
       document.getElementById('dot').className = 'dot';
       document.getElementById('status-txt').textContent = 'Sin conexion';
     }
   }
 
-  // ── Modal ─────────────────────────────────────────────────
+  // ── Handoff resolve ───────────────────────────────────────
 
-  function openModal()  { document.getElementById('backdrop').classList.add('open'); }
-  function closeModal() { document.getElementById('backdrop').classList.remove('open'); }
-  function backdropClick(e) { if (e.target === document.getElementById('backdrop')) closeModal(); }
+  async function resolveHandoff(callId) {
+    try {
+      const r = await fetch(`/calls/${callId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'resolved' }),
+      });
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error); }
+      toast('Handoff marcado como resuelto');
+      await refresh();
+    } catch (e) {
+      toast(e.message, 'err');
+    }
+  }
+
+  // ── Modals ────────────────────────────────────────────────
+
+  function openCallModal(ongName = '') {
+    if (ongName) {
+      // Esperar a que el select esté poblado y pre-seleccionar
+      setTimeout(() => { document.getElementById('f-ong').value = ongName; }, 0);
+    }
+    document.getElementById('bd-call').classList.add('open');
+  }
+
+  function openOnboardingModal() {
+    document.getElementById('bd-onboarding').classList.add('open');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+
+  function backdropClick(e, id) {
+    if (e.target === document.getElementById(id)) closeModal(id);
+  }
+
+  // ── Submit: Nueva Llamada ─────────────────────────────────
 
   async function submitCall() {
-    const phone       = document.getElementById('f-phone').value.trim();
-    const donor_name  = document.getElementById('f-donor').value.trim();
-    const last_amount = document.getElementById('f-amount').value.trim();
-    const ong_name    = document.getElementById('f-ong').value;
+    const phone      = document.getElementById('f-phone').value.trim();
+    const donor_name = document.getElementById('f-donor').value.trim();
+    const last_amount= document.getElementById('f-amount').value.trim();
+    const ong_name   = document.getElementById('f-ong').value;
 
-    if (!phone)      { toast('Ingresa el telefono del donante', 'err'); return; }
+    if (!phone)      { toast('Ingresa el teléfono del donante', 'err'); return; }
     if (!donor_name) { toast('Ingresa el nombre del donante', 'err'); return; }
 
     const btn = document.getElementById('btn-call');
-    btn.disabled = true;
-    btn.textContent = 'Llamando…';
-
+    btn.disabled = true; btn.textContent = 'Llamando…';
     try {
       const r = await fetch('/call', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, donor_name, last_amount, ong_name }),
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Error al iniciar la llamada');
-      toast(`Llamada iniciada a ${donor_name} (${phone})`);
-      closeModal();
-      document.getElementById('f-phone').value  = '';
-      document.getElementById('f-donor').value  = '';
-      document.getElementById('f-amount').value = '';
-      document.getElementById('f-ong').value    = '';
+      toast(`Valentina llamando a ${donor_name} · ${phone}`);
+      closeModal('bd-call');
+      ['f-phone','f-donor','f-amount'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('f-ong').value = '';
       await refresh();
     } catch (e) {
       toast(e.message, 'err');
     } finally {
-      btn.disabled = false;
-      btn.textContent = 'Llamar ▶';
+      btn.disabled = false; btn.textContent = 'Llamar ▶';
     }
   }
 
-  // ── Keyboard shortcut ─────────────────────────────────────
+  // ── Submit: Onboarding ────────────────────────────────────
+
+  async function submitOnboarding() {
+    const phone    = document.getElementById('o-phone').value.trim();
+    const ong_name = document.getElementById('o-ong').value.trim();
+
+    if (!phone)    { toast('Ingresa el teléfono de la ONG', 'err'); return; }
+    if (!ong_name) { toast('Ingresa el nombre de la ONG', 'err'); return; }
+
+    const btn = document.getElementById('btn-onboarding');
+    btn.disabled = true; btn.textContent = 'Llamando…';
+    try {
+      const r = await fetch('/onboarding', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, ong_name }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Error al iniciar onboarding');
+      toast(`Sofía llamando a ${ong_name} · conv: ${data.conversation_id}`, 'info');
+      closeModal('bd-onboarding');
+      document.getElementById('o-phone').value = '';
+      document.getElementById('o-ong').value   = '';
+      await refresh();
+    } catch (e) {
+      toast(e.message, 'err');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Iniciar ▶';
+    }
+  }
+
+  // ── Keyboard ──────────────────────────────────────────────
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape') {
+      closeModal('bd-call');
+      closeModal('bd-onboarding');
+    }
   });
 
   // ── Init ──────────────────────────────────────────────────

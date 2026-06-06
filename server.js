@@ -413,6 +413,54 @@ app.post('/webhook/elevenlabs', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// PATCH /calls/:id — actualizar estado de una llamada
+// Body: { status, notes? }
+// ─────────────────────────────────────────────
+
+app.patch('/calls/:id', (req, res) => {
+  const { id } = req.params;
+  const { status, notes } = req.body || {};
+  if (!status) return res.status(400).json({ error: 'Falta "status"' });
+
+  const updated = updateJsonByField(CALLS_LOG_PATH, 'call_id', id, {
+    status,
+    ...(notes !== undefined && { notes }),
+    updated_at: new Date().toISOString(),
+  });
+
+  if (!updated) return res.status(404).json({ error: `Llamada "${id}" no encontrada` });
+
+  const call = readJson(CALLS_LOG_PATH).find(c => c.call_id === id);
+  console.log(`[/calls/${id}] status => ${status}`);
+  return res.json({ ok: true, call });
+});
+
+// ─────────────────────────────────────────────
+// GET /backup — exportar calls + ONGs como JSON
+// ─────────────────────────────────────────────
+
+app.get('/backup', (_req, res) => {
+  const calls = readJson(CALLS_LOG_PATH);
+  const ongs  = readJson(ONG_PROFILES_PATH);
+  res.json({ exported_at: new Date().toISOString(), version: 1, calls, ongs });
+});
+
+// ─────────────────────────────────────────────
+// POST /restore — restaurar calls + ONGs desde backup
+// Body: { calls: [...], ongs: [...] }
+// ─────────────────────────────────────────────
+
+app.post('/restore', (req, res) => {
+  const { calls, ongs } = req.body || {};
+  if (!Array.isArray(calls)) return res.status(400).json({ error: 'Falta "calls" como array' });
+  if (!Array.isArray(ongs))  return res.status(400).json({ error: 'Falta "ongs" como array' });
+  writeFileSync(CALLS_LOG_PATH,    JSON.stringify(calls, null, 2), 'utf8');
+  writeFileSync(ONG_PROFILES_PATH, JSON.stringify(ongs,  null, 2), 'utf8');
+  console.log(`[/restore] ${calls.length} calls + ${ongs.length} ONGs restaurados.`);
+  return res.json({ ok: true, calls_restored: calls.length, ongs_restored: ongs.length });
+});
+
+// ─────────────────────────────────────────────
 // GET /calls — historial de llamadas
 // ─────────────────────────────────────────────
 
@@ -475,6 +523,9 @@ app.listen(PORT, () => {
   console.log('  GET  /calls');
   console.log('  GET  /ongs');
   console.log('  GET  /dashboard');
+  console.log('  PATCH /calls/:id             { status }');
+  console.log('  GET  /backup                  exportar datos');
+  console.log('  POST /restore                 { calls, ongs }');
   console.log(`  GET  /ui/                     http://localhost:${PORT}/ui/`);
   if (!AGENT_ID || !AGENT_PHONE_NUMBER_ID) {
     console.warn('\n  AVISO: setup incompleto. Corre npm run setup.');

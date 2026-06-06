@@ -1,22 +1,80 @@
 # Voice Bot — Sistema de llamadas para ONGs
 
 ## Qué hace
-- **Agente Valentina**: llama a donantes existentes, cuenta el impacto de su donación y los reactiva
-- **Agente Sofía**: onboarding conversacional de nuevas ONGs al sistema
-- **Dashboard**: métricas de campañas en tiempo real
+- **Sofía**: llama a la ONG, hace preguntas y extrae los datos del equipo automáticamente
+- **Valentina**: llama a donantes con el contexto real de la ONG y los reactiva
+- **Dashboard**: métricas, handoffs y gestión en tiempo real en `/ui/`
+
+---
+
+## Demo en vivo — 5 minutos
+
+### El flujo completo
+
+```
+1. Sofía llama a la ONG
+        ↓
+   (Conversación natural, ~3 min)
+        ↓
+2. Webhook dispara automáticamente
+        ↓
+   GPT-4o-mini extrae: causa, tono, equipo, impacto
+        ↓
+3. Valentina llama a donantes
+   con el contexto real de esa ONG
+        ↓
+4. Si el donante necesita un humano
+   → Dashboard alerta: HANDOFF ⚠️
+```
+
+### Comandos para la demo
+
+**Paso 1 — Onboarding de la ONG (Sofía):**
+```powershell
+Invoke-RestMethod https://voice-bot-production-63d2.up.railway.app/onboarding -Method Post -ContentType "application/json" -Body '{"phone":"+549TU_NUMERO","ong_name":"Nombre de la ONG"}'
+```
+
+**Paso 2 — Verificar perfil completado (esperar ~60s después de colgar):**
+```powershell
+Invoke-RestMethod https://voice-bot-production-63d2.up.railway.app/ongs | ConvertTo-Json -Depth 5
+```
+
+**Paso 3 — Llamar a un donante con Valentina:**
+```powershell
+Invoke-RestMethod https://voice-bot-production-63d2.up.railway.app/call -Method Post -ContentType "application/json" -Body '{"phone":"+549NUMERO_DONANTE","donor_name":"Nombre","last_amount":"1500","ong_name":"Nombre de la ONG"}'
+```
+
+**Dashboard en tiempo real:**
+→ https://voice-bot-production-63d2.up.railway.app/ui/
+
+### Backup antes de cada demo
+> ⚠️ Railway reinicia el servidor en cada deploy y pierde los datos en memoria.
+> Hacer backup antes de la demo y restaurar si es necesario.
+
+```powershell
+# Guardar backup
+Invoke-RestMethod https://voice-bot-production-63d2.up.railway.app/backup | ConvertTo-Json -Depth 10 | Out-File backup-$(Get-Date -Format 'yyyyMMdd-HHmm').json
+
+# Restaurar backup
+$backup = Get-Content backup-FECHA.json | ConvertFrom-Json
+Invoke-RestMethod https://voice-bot-production-63d2.up.railway.app/restore -Method Post -ContentType "application/json" -Body ($backup | ConvertTo-Json -Depth 10)
+```
+
+---
+
+## Setup en 5 pasos
+
+1. `git clone https://github.com/ortugonzalez/voice-bot.git`
+2. `cd voice-bot && npm install`
+3. `cp .env.example .env` — completar con tus keys
+4. `npm run setup` — crea los agentes en ElevenLabs, importa el número y configura webhooks
+5. `npm start` — levanta el servidor en puerto 3100
 
 ## Requisitos
 - Node.js 18+
 - Cuenta ElevenLabs (plan con permiso `convai_write`)
 - Cuenta Twilio (upgradeada, no trial)
-- ngrok (opcional, solo para desarrollo local con webhooks)
-
-## Setup en 5 pasos
-1. `git clone https://github.com/ortugonzalez/voice-bot.git`
-2. `cd voice-bot && npm install`
-3. `cp .env.example .env` — completar con tus keys
-4. `npm run setup` — crea los agentes en ElevenLabs e importa el número de Twilio
-5. `npm start` — levanta el servidor en puerto 3100
+- OpenAI API key (para parsear transcripts con gpt-4o-mini)
 
 ## Endpoints
 
@@ -25,31 +83,39 @@
 | `POST` | `/call` | Llama a un donante individual |
 | `POST` | `/call/batch` | Campaña a una lista de donantes |
 | `POST` | `/onboarding` | Inicia el onboarding de una ONG nueva |
-| `GET` | `/calls` | Historial de llamadas realizadas |
-| `GET` | `/ongs` | Perfiles de ONGs registradas |
-| `GET` | `/dashboard` | Métricas generales de campañas |
-| `GET` | `/health` | Estado del servidor y configuración |
+| `POST` | `/onboarding/complete` | Parsea el transcript y completa el perfil |
+| `POST` | `/webhook/elevenlabs` | Evento post-llamada de ElevenLabs |
+| `PATCH`| `/calls/:id` | Actualizar estado de una llamada |
+| `GET`  | `/calls` | Historial de llamadas realizadas |
+| `GET`  | `/ongs` | Perfiles de ONGs registradas |
+| `GET`  | `/dashboard` | Métricas generales + handoffs |
+| `GET`  | `/backup` | Exportar datos (calls + ONGs) |
+| `POST` | `/restore` | Restaurar datos desde backup |
+| `GET`  | `/health` | Estado del servidor |
+| `GET`  | `/ui/` | Dashboard web |
 
-## Variables de entorno necesarias
+## Variables de entorno
 
 ```env
-# ElevenLabs — requiere plan con Conversational AI habilitado
-ELEVENLABS_API_KEY=        # API key con permiso convai_write (y voices_read recomendado)
-ELEVENLABS_VOICE_ID=       # ID de la voz del agente (default: Sarah, multilingüe)
-ELEVENLABS_TTS_MODEL=      # Modelo TTS (default: eleven_flash_v2_5)
-ELEVENLABS_LLM=            # LLM del agente (default: gemini-2.5-flash)
+# ElevenLabs
+ELEVENLABS_API_KEY=
+ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
+ELEVENLABS_TTS_MODEL=eleven_flash_v2_5
+ELEVENLABS_LLM=gemini-2.5-flash
+AGENT_ID=                  # Valentina — completado por npm run setup
+SOFIA_AGENT_ID=            # Sofía — completado por npm run setup
+AGENT_PHONE_NUMBER_ID=     # completado por npm run setup
 
-# Completados automáticamente por `npm run setup`
-AGENT_ID=                  # ID del agente Valentina en ElevenLabs
-AGENT_PHONE_NUMBER_ID=     # ID del número de Twilio importado en ElevenLabs
+# Twilio
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE_NUMBER=       # E.164 (ej: +16693381855)
 
-# Twilio — cuenta upgradeada (sin restricciones trial)
-TWILIO_ACCOUNT_SID=        # Account SID (empieza con AC...)
-TWILIO_AUTH_TOKEN=         # Auth Token
-TWILIO_PHONE_NUMBER=       # Número comprado, formato E.164 (ej: +16693381855)
+# OpenAI
+OPENAI_API_KEY=
 
 # Servidor
-PORT=3100                  # Puerto del servidor Express
+PORT=3100
 ```
 
 ## Cómo testear sin instalar nada
@@ -59,56 +125,25 @@ El servidor ya está corriendo. Solo necesitás un número de teléfono y ejecut
 ### Recibir una llamada de Valentina (donante)
 
 ```powershell
-Invoke-RestMethod http://https://voice-bot-production-63d2.up.railway.app/call -Method Post -ContentType "application/json" -Body '{"phone":"+549TU_NUMERO","donor_name":"Tu Nombre","last_amount":"1500","ong_name":"Pequeños Pasos"}'
+Invoke-RestMethod https://voice-bot-production-63d2.up.railway.app/call -Method Post -ContentType "application/json" -Body '{"phone":"+549TU_NUMERO","donor_name":"Tu Nombre","last_amount":"1500","ong_name":"Pequeños Pasos"}'
 ```
 
 ### Recibir una llamada de Sofía (onboarding)
 
 ```powershell
-Invoke-RestMethod http://https://voice-bot-production-63d2.up.railway.app/onboarding -Method Post -ContentType "application/json" -Body '{"phone":"+549TU_NUMERO","ong_name":"Tu ONG"}'
+Invoke-RestMethod https://voice-bot-production-63d2.up.railway.app/onboarding -Method Post -ContentType "application/json" -Body '{"phone":"+549TU_NUMERO","ong_name":"Tu ONG"}'
 ```
 
 ### Ver el dashboard de métricas
 
 ```powershell
-Invoke-RestMethod http://https://voice-bot-production-63d2.up.railway.app/dashboard
+Invoke-RestMethod https://voice-bot-production-63d2.up.railway.app/dashboard
 ```
 
 ### Ver todas las llamadas registradas
 
 ```powershell
-Invoke-RestMethod http://https://voice-bot-production-63d2.up.railway.app/calls
+Invoke-RestMethod https://voice-bot-production-63d2.up.railway.app/calls
 ```
 
-Reemplazá `https://voice-bot-production-63d2.up.railway.app` con la URL que te pase el equipo.
 Reemplazá `+549TU_NUMERO` con tu número argentino en formato internacional.
-
----
-
-## Ejemplo de llamada rápida
-
-**Llamada individual** (`POST /call`):
-
-```bash
-# curl
-curl -X POST http://localhost:3100/call \
-  -H "Content-Type: application/json" \
-  -d '{"phone":"+5492235428861","donor_name":"María","last_amount":"1500","ong_name":"Pequeños Pasos"}'
-
-# PowerShell
-Invoke-RestMethod -Uri http://localhost:3100/call -Method Post `
-  -ContentType "application/json" `
-  -Body '{"phone":"+5492235428861","donor_name":"Maria","last_amount":"1500","ong_name":"Pequenos Pasos"}'
-```
-
-**Health check** (`GET /health`):
-
-```bash
-curl http://localhost:3100/health
-```
-
-**Test completo desde el repo**:
-
-```bash
-npm run call   # ejecuta test-call.js con datos de ejemplo
-```
