@@ -8,7 +8,7 @@
     "setup": "node setup.js",
     "start": "node server.js",
     "call": "node test-call.js",
-    "test": "node --test"
+    "test": "node --test call-analysis.test.js dashboard/csv-parser.test.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

@@ -11,6 +11,20 @@ dotenv.config({ path: new URL('./.env', import.meta.url) });
 
 const API = 'https://api.elevenlabs.io';
 const KEY = process.env.ELEVENLABS_API_KEY;
+
+const END_CALL_TOOL = {
+  name: 'end_call',
+  type: 'system',
+  description: 'Terminá la llamada cuando la conversación haya concluido o la otra persona se despida.',
+  params: { system_tool_type: 'end_call' },
+};
+
+const VOICEMAIL_DETECTION_TOOL = {
+  name: 'voicemail_detection',
+  type: 'system',
+  description: 'Detectá saludos automáticos, buzones de voz y pedidos de dejar un mensaje.',
+  params: { system_tool_type: 'voicemail_detection' },
+};
 const ENV_PATH = new URL('./.env', import.meta.url);
 
 if (!KEY) {
@@ -81,8 +95,10 @@ decí: 'Eso te lo puede responder mejor alguien del equipo,
 querés que te llamen?' y marcá handoff_required = true.
 Si el donante dice que no puede donar ahora, preguntás si podés llamarlo
 en otro momento y guardás esa preferencia.
+Si detectás un contestador automático o buzón de voz, usá voicemail_detection.
+Dejá un único mensaje breve con el nombre de la ONG y terminá la llamada con end_call.
 Usás el tono indicado para esta ONG: {{tono}}.
-Cerrás siempre con calidez, nunca cortés abruptamente.`;
+Cerrás siempre con calidez y después usás end_call.`;
 
 const VALENTINA_FIRST_MESSAGE = 'Hola {{donor_name}}, ¿cómo andás? Te llamo de {{ong_name}}, ¿tenés un minutito?';
 
@@ -91,7 +107,14 @@ async function setupValentina() {
     name: 'Valentina - Reactivacion Donantes (WIS)',
     conversation_config: {
       agent: {
-        prompt: { prompt: VALENTINA_PROMPT, llm: process.env.ELEVENLABS_LLM },
+        prompt: {
+          prompt: VALENTINA_PROMPT,
+          llm: process.env.ELEVENLABS_LLM,
+          built_in_tools: {
+            end_call: END_CALL_TOOL,
+            voicemail_detection: VOICEMAIL_DETECTION_TOOL,
+          },
+        },
         first_message: VALENTINA_FIRST_MESSAGE,
         language: 'es',
       },
@@ -149,6 +172,7 @@ Haces estas preguntas de a una, esperando la respuesta antes de seguir:
 6. Hay algo especial que queres que mencionemos sobre el impacto de las donaciones?
 Al final deci: 'Perfecto, ya tengo todo lo que necesito.
 En unos minutos vas a recibir la confirmacion por WhatsApp. Gracias!'
+Después usá end_call.
 Sos paciente, si no entendes algo preguntas de vuelta con amabilidad.`;
 
 const SOFIA_FIRST_MESSAGE = 'Hola! Soy Sofia, de WIS. Te llamo para conocer un poco tu organizacion y dejar todo listo. Tenes unos minutos?';
@@ -158,7 +182,11 @@ async function setupSofia() {
     name: 'Sofia - Onboarding ONGs (WIS)',
     conversation_config: {
       agent: {
-        prompt: { prompt: SOFIA_PROMPT, llm: process.env.ELEVENLABS_LLM },
+        prompt: {
+          prompt: SOFIA_PROMPT,
+          llm: process.env.ELEVENLABS_LLM,
+          built_in_tools: { end_call: END_CALL_TOOL },
+        },
         first_message: SOFIA_FIRST_MESSAGE,
         language: 'es',
       },

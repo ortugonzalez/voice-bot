@@ -510,6 +510,7 @@
 
 <div id="toast"></div>
 
+<script type="module" src="/ui/csv-parser.js"></script>
 <script>
   // ── Helpers ───────────────────────────────────────────────
 
@@ -518,6 +519,8 @@
       initiated:        ['b-green',  'Iniciada'],
       completed:        ['b-blue',   'Completada'],
       converted:        ['b-purple', 'Convertida'],
+      voicemail:        ['b-gray',   'Buzón de voz'],
+      no_response:      ['b-gray',   'Sin respuesta'],
       handoff_required: ['b-orange', 'Handoff'],
       failed:           ['b-red',    'Fallida'],
       pending:          ['b-gray',   'Pendiente'],
@@ -528,7 +531,7 @@
       resolved:         ['b-gray',   'Resuelto'],
     };
     const [cls, lbl] = map[status] || ['b-gray', status || '—'];
-    return `<span class="badge ${cls}">${lbl}</span>`;
+    return `<span class="badge ${cls}">${esc(lbl)}</span>`;
   }
 
   function ago(iso) {
@@ -548,7 +551,16 @@
 
   function esc(s) {
     if (!s) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+  }
+
+  function jsArg(s) {
+    return encodeURIComponent(String(s ?? '')).replace(/'/g, '%27');
   }
 
   function toast(msg, type = 'ok') {
@@ -594,7 +606,7 @@
             <span class="handoff-phone">${esc(h.donor_phone) || ''}</span>
             <span class="handoff-ong">${esc(h.ong_name) || ''}</span>
             <span class="handoff-time">${ago(h.timestamp)}</span>
-            <button class="btn-resolve" onclick="resolveHandoff('${esc(h.call_id)}')">Marcar resuelto ✓</button>
+            <button class="btn-resolve" onclick="resolveHandoff(decodeURIComponent('${jsArg(h.call_id)}'))">Marcar resuelto ✓</button>
           </div>`).join('');
       } else {
         alertEl.classList.remove('visible');
@@ -617,7 +629,7 @@
               <td>${badge(c.status)}</td>
               <td class="mono muted">${esc(c.donor_phone)||'—'}</td>
               <td>${c.conversation_id
-                ? `<button class="btn-sm blue" onclick="viewTranscript('${esc(c.call_id)}','${esc(c.donor_name)}')">Ver transcript</button>`
+                ? `<button class="btn-sm blue" onclick="viewTranscript(decodeURIComponent('${jsArg(c.call_id)}'),decodeURIComponent('${jsArg(c.donor_name)}'))">Ver transcript</button>`
                 : '—'}</td>
             </tr>`).join('')}</tbody>
           </table>`;
@@ -646,7 +658,7 @@
               <td class="mono">${esc(o.donantes_activos)||'—'}</td>
               <td>${badge(o.status)}</td>
               <td>${o.status === 'completed'
-                ? `<button class="btn-sm" onclick="openCallModal('${esc(o.ong_name)}')">Llamar donante ▶</button>`
+                ? `<button class="btn-sm" onclick="openCallModal(decodeURIComponent('${jsArg(o.ong_name)}'))">Llamar donante ▶</button>`
                 : '—'}</td>
             </tr>`).join('')}</tbody>
           </table>`;
@@ -773,34 +785,28 @@
 
   // ── CSV: parsear y previsualizar ──────────────────────────
 
-  function parseCSVText(text) {
-    const lines = text.trim().split('\n').filter(l => l.trim());
-    if (lines.length < 2) return [];
-    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
-    return lines.slice(1).map(line => {
-      const values = [];
-      let cur = '', inQ = false;
-      for (const ch of line) {
-        if (ch === '"') { inQ = !inQ; }
-        else if (ch === ',' && !inQ) { values.push(cur.trim()); cur = ''; }
-        else { cur += ch; }
-      }
-      values.push(cur.trim());
-      const obj = {};
-      headers.forEach((h, i) => obj[h] = (values[i] || '').replace(/^"|"$/g, ''));
-      return obj;
-    }).filter(r => r.phone); // descartar filas sin teléfono
-  }
-
   function onCSVSelected(e) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      const donors = parseCSVText(ev.target.result);
-      window._csvDonors = donors;
       const wrap = document.getElementById('csv-preview-wrap');
       const btn  = document.getElementById('btn-csv');
+      let donors;
+
+      try {
+        donors = window.parseCSVText(ev.target.result);
+      } catch (error) {
+        window._csvDonors = [];
+        wrap.style.display = 'block';
+        document.getElementById('csv-preview').innerHTML =
+          `<div class="empty" style="padding:16px">${esc(error.message)}</div>`;
+        document.getElementById('csv-count').textContent = '';
+        btn.disabled = true;
+        return;
+      }
+
+      window._csvDonors = donors;
 
       if (donors.length === 0) {
         wrap.style.display = 'block';
@@ -828,6 +834,34 @@
       btn.disabled = false;
     };
     reader.readAsText(file, 'UTF-8');
+  }
+
+  function trackCampaignProgress(campaignId, total) {
+    clearTimeout(window._campaignProgressTimer);
+    const bar   = document.getElementById('csv-progress-bar');
+    const label = document.getElementById('csv-progress-label');
+
+    const poll = async () => {
+      try {
+        const data = await fetch('/campaigns').then(r => r.json());
+        const campaign = (data.campaigns || []).find(item => item.batch_id === campaignId);
+        const processed = campaign?.procesadas ?? 0;
+        const pct = total > 0 ? Math.round(processed / total * 100) : 0;
+        bar.style.width = `${Math.min(pct, 100)}%`;
+        label.textContent = `${processed}/${total} llamadas procesadas`;
+
+        if (campaign?.status === 'completed') {
+          bar.style.width = '100%';
+          label.textContent = `${total}/${total} llamadas procesadas`;
+          return;
+        }
+      } catch {
+        label.textContent = 'Esperando actualización de campaña…';
+      }
+      window._campaignProgressTimer = setTimeout(poll, 2000);
+    };
+
+    poll();
   }
 
   async function submitCSV() {
@@ -860,22 +894,8 @@
 
       if (!r.ok) throw new Error(data.error || 'Error al iniciar campaña');
 
-      // Simular progreso visual (el batch corre en background con 30s entre llamadas)
       const total = data.total || donors.length;
-      let step = 0;
-      const interval = setInterval(() => {
-        step++;
-        const pct = Math.min(Math.round(step / total * 100), 95);
-        bar.style.width = pct + '%';
-        label.textContent = `${step}/${total} llamadas iniciadas…`;
-        if (step >= total) clearInterval(interval);
-      }, 500);
-
-      setTimeout(() => {
-        bar.style.width = '100%';
-        label.textContent = `${total} llamadas iniciadas`;
-        clearInterval(interval);
-      }, (total * 500) + 1000);
+      trackCampaignProgress(data.campaign_id, total);
 
       toast(`Campaña iniciada · ${total} llamadas · ID: ${data.campaign_id?.slice(0,8)}…`);
       await refresh();
@@ -898,9 +918,10 @@
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Error al cargar transcript');
 
-      const dur = data.duration_secs
-        ? `${Math.floor(data.duration_secs/60)}:${String(Math.round(data.duration_secs%60)).padStart(2,'0')}`
-        : null;
+      const roundedDuration = data.duration_secs == null ? null : Math.round(data.duration_secs);
+      const dur = roundedDuration == null
+        ? null
+        : `${Math.floor(roundedDuration/60)}:${String(roundedDuration%60).padStart(2,'0')}`;
 
       document.getElementById('tr-sub').textContent =
         [data.ong_name, dur ? `Duración: ${dur}` : null, hhmm(data.timestamp)]

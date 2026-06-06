@@ -43,6 +43,15 @@ const HANDOFF_PHRASES = [
   'te van a contactar',
 ];
 
+const VOICEMAIL_PHRASES = [
+  'deja un mensaje despues del tono',
+  'deje su mensaje despues del tono',
+  'no se encuentra disponible en este momento',
+  'alcanzaste el tiempo maximo de grabacion',
+  'para escuchar tu mensaje',
+  'para borrar y volver a grabar',
+];
+
 export function normalizeText(text) {
   return String(text ?? '')
     .toLowerCase()
@@ -69,17 +78,25 @@ export function classifyValentinaCall({ transcript = [], summary = '' } = {}) {
     .filter(Boolean);
 
   const conversionSources = donorMessages.length > 0 ? donorMessages : [summary];
-  const isConverted = conversionSources.some(indicatesConversion);
-
   const fullText = normalizeText([
     ...turns.map(turn => turn?.message ?? ''),
     summary,
   ].join(' '));
-  const requiresHandoff = !isConverted &&
+  const isVoicemail = VOICEMAIL_PHRASES.some(phrase => fullText.includes(normalizeText(phrase)));
+  const hasDonorResponse = donorMessages.some(message => normalizeText(message));
+  const hasNoResponse = turns.length > 0 && !hasDonorResponse;
+  const isConverted = !isVoicemail && !hasNoResponse && conversionSources.some(indicatesConversion);
+  const requiresHandoff = !isVoicemail && !hasNoResponse && !isConverted &&
     HANDOFF_PHRASES.some(phrase => fullText.includes(normalizeText(phrase)));
 
   return {
-    status: isConverted ? 'converted' : (requiresHandoff ? 'handoff_required' : 'completed'),
+    status: isVoicemail
+      ? 'voicemail'
+      : (hasNoResponse
+          ? 'no_response'
+          : (isConverted ? 'converted' : (requiresHandoff ? 'handoff_required' : 'completed'))),
+    isVoicemail,
+    hasNoResponse,
     isConverted,
     requiresHandoff,
   };

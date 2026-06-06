@@ -3,7 +3,7 @@
 ## Qué hace
 - **Sofía**: llama a la ONG, hace preguntas y extrae los datos del equipo automáticamente
 - **Valentina**: llama a donantes con el contexto real de la ONG y los reactiva
-- **Dashboard**: métricas, handoffs y gestión en tiempo real en `/ui/`
+- **Dashboard**: métricas, CSV, conversiones, handoffs y transcripts en `/ui/`
 
 ---
 
@@ -16,15 +16,15 @@
         ↓
    (Conversación natural, ~3 min)
         ↓
-2. Webhook dispara automáticamente
+2. Webhook o polling detectan el final
         ↓
    GPT-4o-mini extrae: causa, tono, equipo, impacto
         ↓
 3. Valentina llama a donantes
    con el contexto real de esa ONG
         ↓
-4. Si el donante necesita un humano
-   → Dashboard alerta: HANDOFF ⚠️
+4. El resultado queda clasificado
+   → convertido, handoff, buzón de voz o completado
 ```
 
 ### Comandos para la demo
@@ -48,7 +48,7 @@ Invoke-RestMethod https://voice-bot-production-63d2.up.railway.app/call -Method 
 → https://voice-bot-production-63d2.up.railway.app/ui/
 
 ### Backup antes de cada demo
-> ⚠️ Railway reinicia el servidor en cada deploy y pierde los datos en memoria.
+> ⚠️ Los datos viven en archivos JSON del contenedor y pueden perderse al recrearlo.
 > Hacer backup antes de la demo y restaurar si es necesario.
 
 ```powershell
@@ -87,9 +87,11 @@ Invoke-RestMethod https://voice-bot-production-63d2.up.railway.app/restore -Meth
 | `POST` | `/webhook/elevenlabs` | Evento post-llamada de ElevenLabs |
 | `PATCH`| `/calls/:id` | Actualizar estado de una llamada |
 | `GET`  | `/calls` | Historial de llamadas realizadas |
+| `GET`  | `/calls/:id/transcript` | Transcript de una llamada |
 | `GET`  | `/ongs` | Perfiles de ONGs registradas |
-| `GET`  | `/dashboard` | Métricas generales + handoffs |
-| `GET`  | `/backup` | Exportar datos (calls + ONGs) |
+| `GET`  | `/campaigns` | Resumen de campañas |
+| `GET`  | `/dashboard` | Métricas, conversiones y handoffs |
+| `GET`  | `/backup` | Exportar llamadas, ONGs y campañas |
 | `POST` | `/restore` | Restaurar datos desde backup |
 | `GET`  | `/health` | Estado del servidor |
 | `GET`  | `/ui/` | Dashboard web |
@@ -116,7 +118,13 @@ OPENAI_API_KEY=
 
 # Servidor
 PORT=3100
+DISABLE_BACKGROUND_JOBS=false
 ```
+
+## Pruebas
+
+`npm test` ejecuta únicamente tests unitarios. Las llamadas reales se disparan de
+forma explícita con `npm run call`.
 
 ## Cómo testear sin instalar nada
 

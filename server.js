@@ -93,6 +93,8 @@ function getCampaignStats(calls, batchId) {
     exitosas:     campaignCalls.filter(call => successfulStatuses.has(call.status)).length,
     convertidos:  campaignCalls.filter(call => call.status === 'converted').length,
     handoffs:     campaignCalls.filter(call => handoffStatuses.has(call.status)).length,
+    voicemails:   campaignCalls.filter(call => call.status === 'voicemail').length,
+    sin_respuesta: campaignCalls.filter(call => call.status === 'no_response').length,
     fallidas:     campaignCalls.filter(call => call.status === 'failed').length,
     encoladas:    campaignCalls.filter(call => call.status === 'queued').length,
   };
@@ -118,13 +120,21 @@ function isWithinCallingHours() {
 
 function updateValentinaOutcome({ conversationId, transcript, summary, failed = false }) {
   const outcome = failed
-    ? { status: 'failed', isConverted: false, requiresHandoff: false }
+    ? {
+        status: 'failed',
+        isVoicemail: false,
+        hasNoResponse: false,
+        isConverted: false,
+        requiresHandoff: false,
+      }
     : classifyValentinaCall({ transcript, summary });
 
   const updates = {
     status:     outcome.status,
     updated_at: new Date().toISOString(),
   };
+  if (outcome.isVoicemail) updates.notes = 'Contestador automático detectado';
+  if (outcome.hasNoResponse) updates.notes = 'No se detectó respuesta del donante';
   if (outcome.isConverted) updates.notes = 'Donante convertido';
   if (outcome.requiresHandoff) updates.notes = 'Handoff detectado en transcript';
   if (failed) updates.notes = 'La conversación terminó con error';
@@ -610,8 +620,9 @@ app.get('/calls/:id/transcript', async (req, res) => {
 
     const secsToMMSS = s => {
       if (s == null) return null;
-      const m = Math.floor(s / 60);
-      const sec = Math.round(s % 60);
+      const rounded = Math.round(s);
+      const m = Math.floor(rounded / 60);
+      const sec = rounded % 60;
       return `${m}:${String(sec).padStart(2, '0')}`;
     };
 
@@ -757,14 +768,57 @@ async function pollPendingOnboardings() {
       if (!r.ok) continue;
       const conv = await r.json();
 
-      const ended       = conv.status && conv.status !== 'processing';
+      const ended = ['done', 'failed'].includes(conv.status);
       const hasTranscript = Array.isArray(conv.transcript) && conv.transcript.length > 0;
-      if (!ended && !hasTranscript) continue;
+      if (!ended) continue;
+      if (conv.status === 'failed') {
+        updateJsonByField(ONG_PROFILES_PATH, 'ong_id', profile.ong_id, {
+          status:     'call_failed',
+          notes:      'La conversación terminó con error',
+          updated_at: new Date().toISOString(),
+        });
+        continue;
+      }
+      if (!hasTranscript) continue;
 
       await parseTranscriptAndUpdate({ conversationId: profile.conversation_id, ongId: profile.ong_id });
       console.log(`[poll] Perfil de ONG completado automaticamente: ${profile.ong_name}`);
     } catch {
       // Silencioso — reintenta en el próximo ciclo
+    }
+  }
+}
+
+// ─────────────────────────────────────────────
+// Background: completar estados de llamadas de Valentina
+// ─────────────────────────────────────────────
+
+async function pollPendingValentinaCalls() {
+  if (!ELEVENLABS_API_KEY) return;
+
+  const pending = readJson(CALLS_LOG_PATH)
+    .filter(call => call.status === 'initiated' && call.conversation_id);
+
+  for (const call of pending) {
+    try {
+      const r = await fetch(`${API}/v1/convai/conversations/${call.conversation_id}`, {
+        headers: { 'xi-api-key': ELEVENLABS_API_KEY },
+      });
+      if (!r.ok) continue;
+      const conv = await r.json();
+      if (!['done', 'failed'].includes(conv.status)) continue;
+
+      const outcome = updateValentinaOutcome({
+        conversationId: call.conversation_id,
+        transcript:     conv.transcript || [],
+        summary:        conv.analysis?.transcript_summary || '',
+        failed:         conv.status === 'failed' || conv.analysis?.call_successful === 'failure',
+      });
+      if (outcome.updated) {
+        console.log(`[poll] Valentina conv=${call.conversation_id} => ${outcome.status}`);
+      }
+    } catch (e) {
+      console.warn(`[poll] No se pudo sincronizar conv=${call.conversation_id}: ${e.message}`);
     }
   }
 }
@@ -780,26 +834,31 @@ async function retryAndProcessCalls() {
 
   const calls = readJson(CALLS_LOG_PATH);
   const withinHours = isWithinCallingHours();
+  if (!withinHours) return;
 
-  // Llamadas fallidas con intentos restantes
+  const now = Date.now();
+  const retryDelayMs = 2 * 60 * 60 * 1000;
+
+  // Llamadas fallidas con intentos restantes y dos horas de espera cumplidas
   const failedToRetry = calls.filter(c =>
-    c.status === 'failed' && (c.attempts ?? 1) < 2
+    c.status === 'failed' &&
+    (c.attempts ?? 1) < 2 &&
+    now - new Date(c.last_retry_at || c.timestamp || 0).getTime() >= retryDelayMs
   );
 
-  // Llamadas encoladas por horario, solo si ahora es horario hábil
-  const queuedToProcess = withinHours
-    ? calls.filter(c => c.status === 'queued')
-    : [];
+  const queuedToProcess = calls.filter(c => c.status === 'queued');
 
   const toProcess = [...failedToRetry, ...queuedToProcess];
   if (toProcess.length === 0) return;
 
   console.log(`[retry] Procesando ${toProcess.length} llamadas (${failedToRetry.length} fallidas, ${queuedToProcess.length} encoladas)`);
 
-  for (const call of toProcess) {
+  for (let i = 0; i < toProcess.length; i++) {
+    if (i > 0) await new Promise(resolve => setTimeout(resolve, 30_000));
+    const call = toProcess[i];
     const isQueued = call.status === 'queued';
     const attempts = isQueued ? 1 : (call.attempts ?? 1) + 1;
-    console.log(`[retry] ↻ Reintento ${attempts}/2: ${call.donor_name}`);
+    console.log(`[retry] Intento ${attempts}/2: ${call.donor_name}`);
 
     const configOverride = getONGOverride(call.ong_name);
     const dynamicVars = {
@@ -817,14 +876,14 @@ async function retryAndProcessCalls() {
         status:          data.success ? 'initiated' : 'failed',
         conversation_id: data.conversation_id ?? null,
         attempts,
-        notes:           `Reintento ${attempts}: ${data.message ?? ''}`,
+        notes:           `Intento ${attempts}: ${data.message ?? ''}`,
         last_retry_at:   new Date().toISOString(),
       });
       console.log(`[retry] OK: ${call.donor_name} conv=${data.conversation_id}`);
     } catch (e) {
       updateJsonByField(CALLS_LOG_PATH, 'call_id', call.call_id, {
         attempts,
-        notes:         `Reintento ${attempts} fallido: ${e.message}`,
+        notes:         `Intento ${attempts} fallido: ${e.message}`,
         last_retry_at: new Date().toISOString(),
       });
       console.error(`[retry] Fallo ${call.donor_name}: ${e.message}`);
@@ -836,12 +895,15 @@ async function retryAndProcessCalls() {
 // Arranque
 // ─────────────────────────────────────────────
 
-if (!DISABLE_BACKGROUND_JOBS) {
+if (DISABLE_BACKGROUND_JOBS !== 'true') {
   setTimeout(() => {
     pollPendingOnboardings();
+    pollPendingValentinaCalls();
+    retryAndProcessCalls();
     setInterval(pollPendingOnboardings, 60_000);
+    setInterval(pollPendingValentinaCalls, 60_000);
+    setInterval(retryAndProcessCalls, 5 * 60 * 1000);
   }, 30_000);
-  setInterval(retryAndProcessCalls, 2 * 60 * 60 * 1000);
 }
 
 app.listen(PORT, () => {
