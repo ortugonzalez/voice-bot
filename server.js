@@ -114,11 +114,27 @@ function isWithinCallingHours() {
   return hour >= 10 && hour < 20;
 }
 
+function getConversationFailureReason(conversation) {
+  return conversation?.metadata?.termination_reason
+    || conversation?.metadata?.error?.reason
+    || null;
+}
+
+function isQuotaFailure(reason) {
+  return /quota limit/i.test(reason || '');
+}
+
 // ─────────────────────────────────────────────
 // Helper: guardar resultado final de una llamada de Valentina
 // ─────────────────────────────────────────────
 
-function updateValentinaOutcome({ conversationId, transcript, summary, failed = false }) {
+function updateValentinaOutcome({
+  conversationId,
+  transcript,
+  summary,
+  failed = false,
+  failureReason = null,
+}) {
   const outcome = failed
     ? {
         status: 'failed',
@@ -137,7 +153,12 @@ function updateValentinaOutcome({ conversationId, transcript, summary, failed = 
   if (outcome.hasNoResponse) updates.notes = 'No se detectó respuesta del donante';
   if (outcome.isConverted) updates.notes = 'Donante convertido';
   if (outcome.requiresHandoff) updates.notes = 'Handoff detectado en transcript';
-  if (failed) updates.notes = 'La conversación terminó con error';
+  if (failed) {
+    updates.notes = failureReason
+      ? `ElevenLabs: ${failureReason}`
+      : 'La conversación terminó con error';
+    if (isQuotaFailure(failureReason)) updates.retryable = false;
+  }
 
   const updated = updateJsonByField(
     CALLS_LOG_PATH,
@@ -772,9 +793,12 @@ async function pollPendingOnboardings() {
       const hasTranscript = Array.isArray(conv.transcript) && conv.transcript.length > 0;
       if (!ended) continue;
       if (conv.status === 'failed') {
+        const failureReason = getConversationFailureReason(conv);
         updateJsonByField(ONG_PROFILES_PATH, 'ong_id', profile.ong_id, {
           status:     'call_failed',
-          notes:      'La conversación terminó con error',
+          notes:      failureReason
+            ? `ElevenLabs: ${failureReason}`
+            : 'La conversación terminó con error',
           updated_at: new Date().toISOString(),
         });
         continue;
@@ -813,6 +837,7 @@ async function pollPendingValentinaCalls() {
         transcript:     conv.transcript || [],
         summary:        conv.analysis?.transcript_summary || '',
         failed:         conv.status === 'failed' || conv.analysis?.call_successful === 'failure',
+        failureReason:  getConversationFailureReason(conv),
       });
       if (outcome.updated) {
         console.log(`[poll] Valentina conv=${call.conversation_id} => ${outcome.status}`);
@@ -842,6 +867,7 @@ async function retryAndProcessCalls() {
   // Llamadas fallidas con intentos restantes y dos horas de espera cumplidas
   const failedToRetry = calls.filter(c =>
     c.status === 'failed' &&
+    c.retryable !== false &&
     (c.attempts ?? 1) < 2 &&
     now - new Date(c.last_retry_at || c.timestamp || 0).getTime() >= retryDelayMs
   );

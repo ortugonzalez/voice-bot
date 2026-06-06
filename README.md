@@ -85,6 +85,10 @@ El health debe mostrar:
 
 Si `ready` es `false`, revisá `.env` y volvé a ejecutar `npm run setup`.
 
+Si la llamada atiende y se corta inmediatamente, revisá el detalle en ElevenLabs.
+El error `This request exceeds your quota limit` indica que la cuenta agotó su
+cuota mensual; es necesario esperar el reinicio o ampliar el plan.
+
 ## Test final
 
 Hacé el test de Valentina entre las 10:00 y las 20:00 de Argentina:
