@@ -59,28 +59,28 @@ El servidor ya está corriendo. Solo necesitás un número de teléfono y ejecut
 ### Recibir una llamada de Valentina (donante)
 
 ```powershell
-Invoke-RestMethod http://URL_DEL_SERVIDOR/call -Method Post -ContentType "application/json" -Body '{"phone":"+549TU_NUMERO","donor_name":"Tu Nombre","last_amount":"1500","ong_name":"Pequeños Pasos"}'
+Invoke-RestMethod http://https://voice-bot-production-63d2.up.railway.app/call -Method Post -ContentType "application/json" -Body '{"phone":"+549TU_NUMERO","donor_name":"Tu Nombre","last_amount":"1500","ong_name":"Pequeños Pasos"}'
 ```
 
 ### Recibir una llamada de Sofía (onboarding)
 
 ```powershell
-Invoke-RestMethod http://URL_DEL_SERVIDOR/onboarding -Method Post -ContentType "application/json" -Body '{"phone":"+549TU_NUMERO","ong_name":"Tu ONG"}'
+Invoke-RestMethod http://https://voice-bot-production-63d2.up.railway.app/onboarding -Method Post -ContentType "application/json" -Body '{"phone":"+549TU_NUMERO","ong_name":"Tu ONG"}'
 ```
 
 ### Ver el dashboard de métricas
 
 ```powershell
-Invoke-RestMethod http://URL_DEL_SERVIDOR/dashboard
+Invoke-RestMethod http://https://voice-bot-production-63d2.up.railway.app/dashboard
 ```
 
 ### Ver todas las llamadas registradas
 
 ```powershell
-Invoke-RestMethod http://URL_DEL_SERVIDOR/calls
+Invoke-RestMethod http://https://voice-bot-production-63d2.up.railway.app/calls
 ```
 
-Reemplazá `URL_DEL_SERVIDOR` con la URL que te pase el equipo.
+Reemplazá `https://voice-bot-production-63d2.up.railway.app` con la URL que te pase el equipo.
 Reemplazá `+549TU_NUMERO` con tu número argentino en formato internacional.
 
 ---
