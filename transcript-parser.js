@@ -1,7 +1,7 @@
-// transcript-parser.js — Obtiene el transcript de ElevenLabs, extrae datos de la ONG con Claude,
+// transcript-parser.js — Obtiene el transcript de ElevenLabs, extrae datos de la ONG con OpenAI,
 // y actualiza ong-profiles.json con el perfil completo.
 
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
@@ -24,10 +24,10 @@ function saveProfiles(profiles) {
 
 export async function parseTranscriptAndUpdate({ conversationId, ongId }) {
   const elevenKey = process.env.ELEVENLABS_API_KEY;
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY;
 
-  if (!elevenKey)    throw new Error('Falta ELEVENLABS_API_KEY en .env');
-  if (!anthropicKey) throw new Error('Falta ANTHROPIC_API_KEY en .env');
+  if (!elevenKey) throw new Error('Falta ELEVENLABS_API_KEY en .env');
+  if (!openaiKey) throw new Error('Falta OPENAI_API_KEY en .env');
 
   // 1. Obtener transcript de ElevenLabs
   const r = await fetch(`${ELEVENLABS_API}/v1/convai/conversations/${conversationId}`, {
@@ -48,11 +48,11 @@ export async function parseTranscriptAndUpdate({ conversationId, ongId }) {
     .map(t => `${t.role === 'agent' ? 'Sofía' : 'ONG'}: ${t.message}`)
     .join('\n');
 
-  // 2. Enviar a Claude Haiku para extraer datos estructurados
-  const client = new Anthropic({ apiKey: anthropicKey });
+  // 2. Enviar a OpenAI gpt-4o-mini para extraer datos estructurados
+  const client = new OpenAI({ apiKey: openaiKey });
 
-  const message = await client.messages.create({
-    model: 'claude-haiku-4-5',
+  const completion = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
     max_tokens: 512,
     messages: [{
       role: 'user',
@@ -73,14 +73,14 @@ ${transcriptText}`,
     }],
   });
 
-  // 3. Parsear respuesta de Claude
-  const rawText = message.content[0].text.trim();
+  // 3. Parsear respuesta
+  const rawText = completion.choices[0].message.content.trim();
   let extracted;
   try {
     const match = rawText.match(/\{[\s\S]*\}/);
     extracted = JSON.parse(match ? match[0] : rawText);
   } catch {
-    throw new Error(`Claude devolvió JSON inválido: ${rawText.slice(0, 200)}`);
+    throw new Error(`OpenAI devolvió JSON inválido: ${rawText.slice(0, 200)}`);
   }
 
   // 4. Actualizar perfil en ong-profiles.json (solo campos no vacíos)

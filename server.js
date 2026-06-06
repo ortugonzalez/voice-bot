@@ -370,7 +370,7 @@ app.post('/webhook/elevenlabs', async (req, res) => {
   }
 
   // Auto-parsear si es una conversacion de onboarding pendiente
-  if (process.env.ANTHROPIC_API_KEY) {
+  if (process.env.OPENAI_API_KEY) {
     const ongs = readJson(ONG_PROFILES_PATH);
     const pending = ongs.find(p => p.conversation_id === conversationId && p.status === 'call_initiated');
     if (pending) {
