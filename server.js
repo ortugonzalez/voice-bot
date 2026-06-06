@@ -90,10 +90,8 @@ function isWithinCallingHours() {
 // ─────────────────────────────────────────────
 
 function normalizeText(text) {
-  return String(text)
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
+  // U+0300–U+036F: bloque de diacríticos combinantes (tildes, etc.)
+  return String(text).toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
 }
 
 // ─────────────────────────────────────────────
