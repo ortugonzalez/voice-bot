@@ -21,5 +21,28 @@
     "timestamp": "2026-06-06T17:44:40.676Z",
     "status": "initiated",
     "notes": "Success"
+  },
+  {
+    "call_id": "35635019-f9e3-40e5-ad9c-4e0fad6c3315",
+    "campaign_id": "1140504d-fe0b-4811-9d1e-69c411ac0d82",
+    "conversation_id": null,
+    "donor_name": "Ana",
+    "donor_phone": "+16693381855",
+    "ong_name": "Peque�os Pasos",
+    "last_amount": "500",
+    "timestamp": "2026-06-06T17:45:11.507Z",
+    "status": "failed",
+    "notes": "HTTP 400 error: Unable to create record: Account not allowed to call +16693381855"
+  },
+  {
+    "call_id": "941ae145-d524-48ec-8e44-71a9c0dfbc8e",
+    "conversation_id": "conv_6401ktf0w948ejw9sge8a2j6envs",
+    "donor_name": "Ortu",
+    "donor_phone": "+5492235428861",
+    "ong_name": "Peque�os Pasos",
+    "last_amount": "1500",
+    "timestamp": "2026-06-06T17:49:45.858Z",
+    "status": "initiated",
+    "notes": "Success"
   }
 ]

@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WIS Voice Bot — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:         #0A0A0A;
+      --surface:    #141414;
+      --surface2:   #1C1C1C;
+      --border:     #252525;
+      --accent:     #F0B429;
+      --accent-dim: rgba(240,180,41,0.12);
+      --text:       #F5F5F5;
+      --muted:      #666;
+      --success:    #22C55E;
+      --error:      #EF4444;
+      --orange:     #F97316;
+      --blue:       #3B82F6;
+      --radius:     10px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 28px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(10,10,10,0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-mark {
+      width: 32px; height: 32px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 14px; font-weight: 700;
+      color: #0A0A0A; flex-shrink: 0;
+    }
+    .logo-text { font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+    .logo-sub  { font-size: 11px; color: var(--muted); }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .status-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 12px; color: var(--muted);
+    }
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.4s;
+    }
+    .dot.online { background: var(--success); animation: pulse 2.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+    .btn-primary {
+      background: var(--accent); color: #0A0A0A;
+      border: none; border-radius: var(--radius);
+      padding: 8px 18px; font-weight: 600; font-size: 13px;
+      cursor: pointer; font-family: inherit;
+      transition: opacity .15s;
+    }
+    .btn-primary:hover { opacity: .82; }
+    .btn-primary:disabled { opacity: .5; cursor: default; }
+
+    /* ── Main ── */
+    main { max-width: 1160px; margin: 0 auto; padding: 28px 28px 60px; }
+
+    /* ── Meta row ── */
+    .meta-row {
+      display: flex; align-items: center; justify-content: flex-end;
+      margin-bottom: 20px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; color: var(--muted);
+    }
+
+    /* ── KPIs ── */
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 700px) { .kpis { grid-template-columns: repeat(2,1fr); } }
+    .kpi {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 20px 16px;
+    }
+    .kpi-label {
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .7px;
+      color: var(--muted); margin-bottom: 12px;
+    }
+    .kpi-value {
+      font-family: 'Space Mono', monospace;
+      font-size: 38px; font-weight: 700; line-height: 1;
+    }
+    .kpi-value.c-accent  { color: var(--accent); }
+    .kpi-value.c-orange  { color: var(--orange); }
+    .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 7px; }
+
+    /* ── Handoff alert ── */
+    .handoff-alert {
+      display: none;
+      background: rgba(249,115,22,0.07);
+      border: 1px solid rgba(249,115,22,0.28);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 22px;
+    }
+    .handoff-alert.visible { display: block; }
+    .handoff-title {
+      font-size: 12px; font-weight: 700;
+      color: var(--orange); text-transform: uppercase; letter-spacing: .5px;
+      margin-bottom: 12px;
+    }
+    .handoff-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(249,115,22,0.1);
+      font-size: 13px;
+    }
+    .handoff-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .handoff-donor { font-weight: 600; }
+    .handoff-phone { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+    .handoff-ong   { color: var(--orange); font-size: 12px; }
+    .handoff-time  { margin-left: auto; font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+    /* ── Card section ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-title { font-size: 13px; font-weight: 600; letter-spacing: -.2px; }
+    .card-count {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; color: var(--muted);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px; padding: 3px 9px;
+    }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      text-align: left;
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .6px;
+      color: var(--muted);
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody td {
+      padding: 11px 20px;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      vertical-align: middle;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: rgba(255,255,255,0.025); }
+    .mono  { font-family: 'Space Mono', monospace; font-size: 12px; }
+    .muted { color: var(--muted); }
+    .truncate { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex; align-items: center;
+      border-radius: 4px; padding: 3px 9px;
+      font-size: 11px; font-weight: 500; letter-spacing: .1px;
+    }
+    .b-green  { background:rgba(34,197,94,.12);  color:#4ade80; }
+    .b-blue   { background:rgba(59,130,246,.12); color:#60a5fa; }
+    .b-orange { background:rgba(249,115,22,.12); color:#fb923c; }
+    .b-red    { background:rgba(239,68,68,.12);  color:#f87171; }
+    .b-yellow { background:var(--accent-dim);    color:var(--accent); }
+    .b-gray   { background:rgba(102,102,102,.18);color:var(--muted); }
+
+    /* ── Empty ── */
+    .empty { text-align: center; padding: 36px 20px; color: var(--muted); font-size: 13px; }
+
+    /* ── Modal backdrop ── */
+    .backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 200;
+      align-items: center; justify-content: center;
+    }
+    .backdrop.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: 420px; max-width: 94vw;
+      padding: 28px;
+      animation: slideUp .2s ease;
+    }
+    @keyframes slideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+    .modal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 22px;
+    }
+    .modal-title { font-size: 16px; font-weight: 700; }
+    .btn-close {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 4px 11px;
+      cursor: pointer; color: var(--muted);
+      font-size: 15px; font-family: inherit; line-height: 1.4;
+    }
+    .btn-close:hover { color: var(--text); }
+    .field { margin-bottom: 16px; }
+    label {
+      display: block; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .5px;
+      color: var(--muted); margin-bottom: 7px;
+    }
+    label .req { color: var(--accent); }
+    input, select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 14px; font-family: inherit;
+      outline: none; transition: border-color .15s;
+    }
+    input::placeholder { color: var(--muted); }
+    input:focus, select:focus { border-color: var(--accent); }
+    select option { background: var(--surface2); }
+    .modal-foot { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+    .btn-ghost {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 9px 18px;
+      color: var(--muted); font-size: 13px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn-ghost:hover { color: var(--text); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 13px 20px;
+      font-size: 13px; color: var(--text);
+      box-shadow: 0 8px 28px rgba(0,0,0,.55);
+      transform: translateY(18px); opacity: 0;
+      transition: all .28s ease;
+      z-index: 400; pointer-events: none;
+      max-width: 340px;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.ok  { border-color: rgba(34,197,94,.4); }
+    #toast.err { border-color: rgba(239,68,68,.4); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">W</div>
+    <div>
+      <div class="logo-text">WIS Voice Bot</div>
+      <div class="logo-sub">Panel de control</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-pill">
+      <span class="dot" id="dot"></span>
+      <span id="status-txt">Conectando…</span>
+    </div>
+    <button class="btn-primary" onclick="openModal()">+ Nueva Llamada</button>
+  </div>
+</header>
+
+<main>
+  <div class="meta-row" id="ts">—</div>
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kpi-label">ONGs registradas</div>
+      <div class="kpi-value c-accent" id="k-ongs">—</div>
+      <div class="kpi-sub">organizaciones</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Total llamadas</div>
+      <div class="kpi-value" id="k-total">—</div>
+      <div class="kpi-sub" id="k-ultima">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Llamadas exitosas</div>
+      <div class="kpi-value" id="k-exit">—</div>
+      <div class="kpi-sub" id="k-pct">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Handoffs pendientes</div>
+      <div class="kpi-value c-orange" id="k-hand">—</div>
+      <div class="kpi-sub">requieren seguimiento</div>
+    </div>
+  </div>
+
+  <!-- Handoffs alert -->
+  <div class="handoff-alert" id="handoff-alert">
+    <div class="handoff-title">⚡ Handoffs que requieren accion</div>
+    <div id="handoff-list"></div>
+  </div>
+
+  <!-- Calls -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Ultimas llamadas</span>
+      <span class="card-count" id="cnt-calls">0</span>
+    </div>
+    <div id="tbl-calls"><div class="empty">Cargando…</div></div>
+  </div>
+
+  <!-- ONGs -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">ONGs registradas</span>
+      <span class="card-count" id="cnt-ongs">0</span>
+    </div>
+    <div id="tbl-ongs"><div class="empty">Cargando…</div></div>
+  </div>
+</main>
+
+<!-- Modal -->
+<div class="backdrop" id="backdrop" onclick="backdropClick(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">Nueva Llamada</span>
+      <button class="btn-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="field">
+      <label for="f-phone">Telefono <span class="req">*</span></label>
+      <input id="f-phone" type="tel" placeholder="+5492235428861" />
+    </div>
+    <div class="field">
+      <label for="f-donor">Nombre del donante <span class="req">*</span></label>
+      <input id="f-donor" type="text" placeholder="Maria" />
+    </div>
+    <div class="field">
+      <label for="f-amount">Ultima donacion ($)</label>
+      <input id="f-amount" type="text" placeholder="1500" />
+    </div>
+    <div class="field">
+      <label for="f-ong">ONG</label>
+      <select id="f-ong">
+        <option value="">— Seleccionar ONG —</option>
+      </select>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" id="btn-call" onclick="submitCall()">Llamar ▶</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ── Helpers ───────────────────────────────────────────────
+
+  function badge(status) {
+    const map = {
+      initiated:        ['b-green',  'Iniciada'],
+      completed:        ['b-blue',   'Completada'],
+      handoff_required: ['b-orange', 'Handoff'],
+      failed:           ['b-red',    'Fallida'],
+      pending:          ['b-gray',   'Pendiente'],
+      call_initiated:   ['b-yellow', 'En proceso'],
+      call_failed:      ['b-red',    'Fallida'],
+    };
+    const [cls, lbl] = map[status] || ['b-gray', status || '—'];
+    return `<span class="badge ${cls}">${lbl}</span>`;
+  }
+
+  function ago(iso) {
+    if (!iso) return '—';
+    const m = Math.floor((Date.now() - new Date(iso)) / 60000);
+    if (m < 1)  return 'Ahora';
+    if (m < 60) return `Hace ${m}m`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `Hace ${h}h`;
+    return new Date(iso).toLocaleDateString('es-AR');
+  }
+
+  function hhmm(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function toast(msg, type = 'ok') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    clearTimeout(el._tid);
+    el._tid = setTimeout(() => el.className = '', 3600);
+  }
+
+  // ── Data & Render ─────────────────────────────────────────
+
+  async function refresh() {
+    try {
+      const [dash, callsData, ongsData] = await Promise.all([
+        fetch('/dashboard').then(r => r.json()),
+        fetch('/calls').then(r => r.json()),
+        fetch('/ongs').then(r => r.json()),
+      ]);
+
+      // Status
+      document.getElementById('dot').className = 'dot online';
+      document.getElementById('status-txt').textContent = 'Online';
+      document.getElementById('ts').textContent =
+        'Actualizado: ' + new Date().toLocaleTimeString('es-AR');
+
+      // KPIs
+      document.getElementById('k-ongs').textContent  = dash.total_ongs      ?? 0;
+      document.getElementById('k-total').textContent = dash.total_llamadas  ?? 0;
+      document.getElementById('k-exit').textContent  = dash.llamadas_exitosas ?? 0;
+      document.getElementById('k-hand').textContent  = dash.handoffs_pendientes ?? 0;
+      document.getElementById('k-ultima').textContent = dash.ultima_llamada ? ago(dash.ultima_llamada) : 'Sin llamadas';
+      const n = dash.total_llamadas, x = dash.llamadas_exitosas;
+      document.getElementById('k-pct').textContent = n > 0 ? `${Math.round(x/n*100)}% de exito` : '—';
+
+      // Handoffs
+      const hands = dash.handoffs_detail || [];
+      const alertEl = document.getElementById('handoff-alert');
+      if (hands.length > 0) {
+        alertEl.classList.add('visible');
+        document.getElementById('handoff-list').innerHTML = hands.map(h => `
+          <div class="handoff-item">
+            <span class="handoff-donor">${esc(h.donor_name) || '—'}</span>
+            <span class="handoff-phone">${esc(h.donor_phone) || ''}</span>
+            <span class="handoff-ong">${esc(h.ong_name) || ''}</span>
+            <span class="handoff-time">${ago(h.timestamp)}</span>
+          </div>`).join('');
+      } else {
+        alertEl.classList.remove('visible');
+      }
+
+      // Calls table
+      const calls = (callsData.calls || []).slice().reverse().slice(0, 10);
+      document.getElementById('cnt-calls').textContent = callsData.total || 0;
+      if (calls.length === 0) {
+        document.getElementById('tbl-calls').innerHTML = '<div class="empty">Sin llamadas registradas aun</div>';
+      } else {
+        document.getElementById('tbl-calls').innerHTML = `<table>
+          <thead><tr>
+            <th>Hora</th><th>Donante</th><th>ONG</th><th>Donacion</th><th>Estado</th><th>Telefono</th>
+          </tr></thead>
+          <tbody>${calls.map(c => `<tr>
+            <td class="mono muted">${hhmm(c.timestamp)}</td>
+            <td>${esc(c.donor_name) || '—'}</td>
+            <td class="muted truncate">${esc(c.ong_name) || '—'}</td>
+            <td class="mono">${c.last_amount ? '$' + esc(c.last_amount) : '—'}</td>
+            <td>${badge(c.status)}</td>
+            <td class="mono muted">${esc(c.donor_phone) || '—'}</td>
+          </tr>`).join('')}</tbody>
+        </table>`;
+      }
+
+      // ONGs table
+      const ongs = ongsData.ongs || [];
+      document.getElementById('cnt-ongs').textContent = ongsData.total || 0;
+
+      // Sync select
+      const sel = document.getElementById('f-ong');
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">— Seleccionar ONG —</option>' +
+        ongs.map(o => `<option value="${esc(o.ong_name)}">${esc(o.ong_name || 'Sin nombre')}</option>`).join('');
+      if (prev) sel.value = prev;
+
+      if (ongs.length === 0) {
+        document.getElementById('tbl-ongs').innerHTML = '<div class="empty">Sin ONGs registradas aun</div>';
+      } else {
+        document.getElementById('tbl-ongs').innerHTML = `<table>
+          <thead><tr>
+            <th>Organizacion</th><th>Causa</th><th>Tono</th><th>Donantes</th><th>Estado</th>
+          </tr></thead>
+          <tbody>${ongs.map(o => `<tr>
+            <td style="font-weight:600">${esc(o.ong_name) || '—'}</td>
+            <td class="muted truncate">${esc(o.causa) || '—'}</td>
+            <td>${esc(o.tono) || '—'}</td>
+            <td class="mono">${esc(o.donantes_activos) || '—'}</td>
+            <td>${badge(o.status)}</td>
+          </tr>`).join('')}</tbody>
+        </table>`;
+      }
+
+    } catch (err) {
+      document.getElementById('dot').className = 'dot';
+      document.getElementById('status-txt').textContent = 'Sin conexion';
+    }
+  }
+
+  // ── Modal ─────────────────────────────────────────────────
+
+  function openModal()  { document.getElementById('backdrop').classList.add('open'); }
+  function closeModal() { document.getElementById('backdrop').classList.remove('open'); }
+  function backdropClick(e) { if (e.target === document.getElementById('backdrop')) closeModal(); }
+
+  async function submitCall() {
+    const phone       = document.getElementById('f-phone').value.trim();
+    const donor_name  = document.getElementById('f-donor').value.trim();
+    const last_amount = document.getElementById('f-amount').value.trim();
+    const ong_name    = document.getElementById('f-ong').value;
+
+    if (!phone)      { toast('Ingresa el telefono del donante', 'err'); return; }
+    if (!donor_name) { toast('Ingresa el nombre del donante', 'err'); return; }
+
+    const btn = document.getElementById('btn-call');
+    btn.disabled = true;
+    btn.textContent = 'Llamando…';
+
+    try {
+      const r = await fetch('/call', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, donor_name, last_amount, ong_name }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Error al iniciar la llamada');
+      toast(`Llamada iniciada a ${donor_name} (${phone})`);
+      closeModal();
+      document.getElementById('f-phone').value  = '';
+      document.getElementById('f-donor').value  = '';
+      document.getElementById('f-amount').value = '';
+      document.getElementById('f-ong').value    = '';
+      await refresh();
+    } catch (e) {
+      toast(e.message, 'err');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Llamar ▶';
+    }
+  }
+
+  // ── Keyboard shortcut ─────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // ── Init ──────────────────────────────────────────────────
+  refresh();
+  setInterval(refresh, 5000);
+</script>
+</body>
+</html>

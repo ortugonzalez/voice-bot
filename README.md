@@ -52,6 +52,39 @@ TWILIO_PHONE_NUMBER=       # Número comprado, formato E.164 (ej: +16693381855)
 PORT=3100                  # Puerto del servidor Express
 ```
 
+## Cómo testear sin instalar nada
+
+El servidor ya está corriendo. Solo necesitás un número de teléfono y ejecutar uno de estos comandos.
+
+### Recibir una llamada de Valentina (donante)
+
+```powershell
+Invoke-RestMethod http://URL_DEL_SERVIDOR/call -Method Post -ContentType "application/json" -Body '{"phone":"+549TU_NUMERO","donor_name":"Tu Nombre","last_amount":"1500","ong_name":"Pequeños Pasos"}'
+```
+
+### Recibir una llamada de Sofía (onboarding)
+
+```powershell
+Invoke-RestMethod http://URL_DEL_SERVIDOR/onboarding -Method Post -ContentType "application/json" -Body '{"phone":"+549TU_NUMERO","ong_name":"Tu ONG"}'
+```
+
+### Ver el dashboard de métricas
+
+```powershell
+Invoke-RestMethod http://URL_DEL_SERVIDOR/dashboard
+```
+
+### Ver todas las llamadas registradas
+
+```powershell
+Invoke-RestMethod http://URL_DEL_SERVIDOR/calls
+```
+
+Reemplazá `URL_DEL_SERVIDOR` con la URL que te pase el equipo.
+Reemplazá `+549TU_NUMERO` con tu número argentino en formato internacional.
+
+---
+
 ## Ejemplo de llamada rápida
 
 **Llamada individual** (`POST /call`):
