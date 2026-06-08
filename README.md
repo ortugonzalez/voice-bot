@@ -9,7 +9,7 @@ Sistema de llamadas outbound para reactivar donantes. Usa ElevenLabs Conversatio
 - Detecta conversiones, handoffs, buzón de voz y llamadas sin respuesta.
 - Permite campañas desde CSV con progreso visual.
 - Reintenta llamadas fallidas y procesa llamadas encoladas.
-- Respeta el horario de donantes de 10:00 a 20:00 de Argentina (UTC-3).
+- Respeta el horario de donantes de 09:00 a 20:00 de Argentina (UTC-3), configurable por entorno.
 - Muestra métricas, campañas y transcripts en `/ui/`.
 - Exporta y restaura los datos con `/backup` y `/restore`.
 
@@ -46,6 +46,8 @@ TWILIO_PHONE_NUMBER=
 OPENAI_API_KEY=
 PORT=3100
 DISABLE_BACKGROUND_JOBS=false
+CALLING_HOURS_START=9
+CALLING_HOURS_END=20
 ```
 
 Después ejecutá:
@@ -91,7 +93,7 @@ cuota mensual; es necesario esperar el reinicio o ampliar el plan.
 
 ## Test final
 
-Hacé el test de Valentina entre las 10:00 y las 20:00 de Argentina:
+Hacé el test de Valentina entre las 09:00 y las 20:00 de Argentina:
 
 ```powershell
 npm run call -- +549XXXXXXXXXX

@@ -35,6 +35,8 @@ const {
   AGENT_PHONE_NUMBER_ID,
   DISABLE_BACKGROUND_JOBS,
   PORT = 3100,
+  CALLING_HOURS_START,
+  CALLING_HOURS_END,
 } = process.env;
 
 const API = 'https://api.elevenlabs.io';
@@ -101,9 +103,18 @@ function getCampaignStats(calls, batchId) {
 }
 
 // ─────────────────────────────────────────────
-// Helpers: horario de llamadas (10-20hs Argentina)
+// Helpers: horario de llamadas (default 09-20hs Argentina)
 // Argentina es UTC-3, sin horario de verano
 // ─────────────────────────────────────────────
+
+function parseCallingHour(value, fallback) {
+  const hour = Number.parseInt(value, 10);
+  if (!Number.isInteger(hour) || hour < 0 || hour > 24) return fallback;
+  return hour;
+}
+
+const callingHoursStart = parseCallingHour(CALLING_HOURS_START, 9);
+const callingHoursEnd = parseCallingHour(CALLING_HOURS_END, 20);
 
 function getArgentinaHour() {
   return new Date(Date.now() - 3 * 60 * 60 * 1000).getUTCHours();
@@ -111,7 +122,7 @@ function getArgentinaHour() {
 
 function isWithinCallingHours() {
   const hour = getArgentinaHour();
-  return hour >= 10 && hour < 20;
+  return hour >= callingHoursStart && hour < callingHoursEnd;
 }
 
 function getConversationFailureReason(conversation) {
@@ -256,6 +267,8 @@ app.get('/health', (_req, res) => {
     phone_configured:     Boolean(AGENT_PHONE_NUMBER_ID),
     within_calling_hours: isWithinCallingHours(),
     argentina_hour:       getArgentinaHour(),
+    calling_hours_start:  callingHoursStart,
+    calling_hours_end:    callingHoursEnd,
     uptime_s:             Math.round(process.uptime()),
   });
 });
@@ -272,7 +285,7 @@ app.post('/call', async (req, res) => {
     return res.status(503).json({ error: 'Setup incompleto. Corre npm run setup.' });
   }
 
-  // Verificar horario permitido (10-20hs Argentina)
+  // Verificar horario permitido
   if (!isWithinCallingHours()) {
     const logEntry = {
       call_id:     randomUUID(),
@@ -282,14 +295,14 @@ app.post('/call', async (req, res) => {
       last_amount: last_amount ?? '',
       timestamp:   new Date().toISOString(),
       status:      'queued',
-      notes:       'Fuera de horario, encolada para las 10:00',
+      notes:       `Fuera de horario, encolada para las ${String(callingHoursStart).padStart(2, '0')}:00`,
       attempts:    0,
     };
     appendJson(CALLS_LOG_PATH, logEntry);
     console.log(`[/call] Encolada fuera de horario: ${phone} (hora AR: ${getArgentinaHour()}hs)`);
     return res.json({
       ok:      false,
-      message: 'Fuera de horario permitido (10-20hs Argentina). Llamada encolada para las 10:00.',
+      message: `Fuera de horario permitido (${callingHoursStart}-${callingHoursEnd}hs Argentina). Llamada encolada para las ${String(callingHoursStart).padStart(2, '0')}:00.`,
     });
   }
 
@@ -360,7 +373,7 @@ app.post('/call/batch', async (req, res) => {
   if (!isWithinCallingHours()) {
     return res.json({
       ok:      false,
-      message: 'Fuera de horario permitido (10-20hs Argentina). Campaña no iniciada.',
+      message: `Fuera de horario permitido (${callingHoursStart}-${callingHoursEnd}hs Argentina). Campaña no iniciada.`,
     });
   }
 
@@ -405,7 +418,7 @@ app.post('/call/batch', async (req, res) => {
           last_amount:     last_amount ?? '',
           timestamp:       new Date().toISOString(),
           status:          'queued',
-          notes:           'Fuera de horario, encolada para las 10:00',
+          notes:           `Fuera de horario, encolada para las ${String(callingHoursStart).padStart(2, '0')}:00`,
           attempts:        0,
         };
         appendJson(CALLS_LOG_PATH, logEntry);
